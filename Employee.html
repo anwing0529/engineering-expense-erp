@@ -1,51 +1,35 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b63ce"><title>員工報帳｜工程費用管理系統</title>
-  <link rel="stylesheet" href="Style.css">
-</head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="index.html" style="text-decoration:none"><span class="logo">費</span><span class="logo-title">工程費用管理系統</span></a>
-    <nav class="top-actions"><a class="link-btn active" href="Employee.html">員工端</a><a class="link-btn" href="Admin.html">老闆端</a></nav>
-  </header>
-  <main class="layout"><div class="container">
-    <div class="page-head">
-      <div><p class="eyebrow">EMPLOYEE</p><h1>我的報帳</h1><p>新增支出並追蹤自己的歷史紀錄</p></div>
-      <button id="openExpenseBtn" class="btn primary">＋ 新增報帳</button>
-    </div>
-    <section class="stats two">
-      <article class="stat"><small>我的累計金額</small><strong>NT$ 13,920</strong></article>
-      <article class="stat"><small>報帳筆數</small><strong>6</strong></article>
-    </section>
-    <section class="card">
-      <div class="card-title"><h2>歷史報帳</h2><span class="chip">展示資料</span></div>
-      <div class="table-wrap desktop-table">
-        <table><thead><tr><th>日期</th><th>工程</th><th>品項</th><th>類別</th><th class="right">金額</th><th>收據</th><th>狀態</th></tr></thead>
-          <tbody><tr><td>2026-07-24</td><td>內湖路修繕工程</td><td>電線與插座</td><td>材料費</td><td class="right">NT$ 2,480</td><td><a class="receipt demoOnly" href="#">查看</a></td><td><span class="status">已送出</span></td></tr>
-          <tr><td>2026-07-20</td><td>國光街頂樓防水</td><td>防水底漆</td><td>材料費</td><td class="right">NT$ 1,930</td><td><a class="receipt demoOnly" href="#">查看</a></td><td><span class="status">已核准</span></td></tr></tbody>
-        </table>
-      </div>
-      <div class="mobile-list">
-        <article class="expense-item"><div class="expense-top"><span>2026-07-24</span><span class="chip">材料費</span></div><h3>電線與插座</h3><p>內湖路修繕工程</p><div class="expense-bottom"><span class="amount">NT$ 2,480</span><a class="receipt demoOnly" href="#">查看收據</a></div></article>
-        <article class="expense-item"><div class="expense-top"><span>2026-07-20</span><span class="chip">材料費</span></div><h3>防水底漆</h3><p>國光街頂樓防水</p><div class="expense-bottom"><span class="amount">NT$ 1,930</span><a class="receipt demoOnly" href="#">查看收據</a></div></article>
-      </div>
-    </section>
-  </div></main>
-  <dialog id="expenseDialog"><form id="expenseForm" class="dialog-body">
-    <div class="dialog-head"><h2>新增報帳</h2><button type="button" class="close closeDialog">×</button></div>
+<div class="page-head">
+  <div><p class="eyebrow">EMPLOYEE</p><h2>我的報帳</h2><p>新增支出並追蹤自己的歷史紀錄</p></div>
+  <button id="openExpenseBtn" class="btn primary"><span class="material-symbols-rounded">add</span>新增報帳</button>
+</div>
+
+<div class="stat-grid employee-stats">
+  <article class="stat-card"><span class="material-symbols-rounded blue">payments</span><div><small>我的累計金額</small><strong id="myTotal">NT$ 0</strong></div></article>
+  <article class="stat-card"><span class="material-symbols-rounded green">description</span><div><small>報帳筆數</small><strong id="myCount">0</strong></div></article>
+</div>
+
+<section class="card">
+  <div class="card-title"><h3>歷史報帳</h3><button id="refreshMineBtn" class="icon-btn" title="重新整理"><span class="material-symbols-rounded">refresh</span></button></div>
+  <div id="myExpenseList" class="mobile-list"></div>
+  <div class="table-wrap desktop-table">
+    <table><thead><tr><th>日期</th><th>工程</th><th>品項</th><th>類別</th><th class="right">金額</th><th>收據</th><th>狀態</th></tr></thead><tbody id="myExpenseTable"></tbody></table>
+  </div>
+</section>
+
+<dialog id="expenseDialog">
+  <form id="expenseForm" method="dialog">
+    <div class="dialog-head"><h3>新增報帳</h3><button type="button" class="icon-btn close-dialog"><span class="material-symbols-rounded">close</span></button></div>
     <div class="form-grid">
-      <label class="field">日期<input type="date" value="2026-07-26" required></label>
-      <label class="field">工程名稱<select required><option>請選擇工程</option><option>內湖路修繕工程</option><option>國光街頂樓防水</option></select></label>
-      <label class="field wide">品項<input placeholder="例如：電線、螺絲、停車費" required></label>
-      <label class="field">類別<select required><option>材料費</option><option>工具設備</option><option>交通費</option></select></label>
-      <label class="field">金額<input type="number" min="1" placeholder="0" required></label>
-      <label class="field wide">收據圖片<input type="file" accept="image/*,.pdf" required></label>
-      <label class="field wide">備註<textarea rows="3" placeholder="選填"></textarea></label>
+      <label>日期<span>*</span><input id="expenseDate" name="date" type="date" required></label>
+      <label>工程名稱<span>*</span><select id="expenseProject" name="project" required></select></label>
+      <label id="customProjectField" class="hidden">其它工程名稱<span>*</span><input id="customProject" name="customProject" maxlength="100" placeholder="例如：台北市仁愛區公寓"></label>
+      <label class="wide">品項<span>*</span><input name="item" maxlength="200" placeholder="例如：電線、螺絲、停車費" required></label>
+      <label>類別<span>*</span><select id="expenseCategory" name="category" required></select></label>
+      <label>金額<span>*</span><input name="amount" type="number" inputmode="decimal" min="1" max="100000000" step="1" placeholder="0" required></label>
+      <label class="wide">收據圖片<span>*</span><input id="receiptInput" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required><small>JPG、PNG、WebP 或 PDF，最大 8MB</small></label>
+      <div id="receiptPreview" class="receipt-preview wide hidden"></div>
+      <label class="wide">備註<textarea name="note" rows="3" maxlength="500" placeholder="選填"></textarea></label>
     </div>
-    <div id="formNotice" class="notice">這是靜態展示頁，不會送出或儲存資料。</div>
-    <div class="dialog-actions"><button type="button" class="btn text closeDialog">取消</button><button class="btn primary" type="submit">送出報帳</button></div>
-  </form></dialog>
-  <script src="Script.js"></script>
-</body></html>
+    <div class="dialog-actions"><button type="button" class="btn text close-dialog">取消</button><button id="submitExpenseBtn" type="submit" class="btn primary">送出報帳</button></div>
+  </form>
+</dialog>
