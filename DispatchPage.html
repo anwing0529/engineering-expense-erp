@@ -31,9 +31,13 @@
       <div class="wide form-section">
         <div class="section-title">
           <strong>工作內容<span>*</span></strong>
-          <button id="addWorkItemBtn" type="button" class="btn text small">＋ 增加項目</button>
+          <small>可複選</small>
         </div>
-        <div id="dispatchWorkItems" class="work-item-editor"></div>
+        <div id="dispatchWorkTypeOptions" class="work-type-options"></div>
+        <label id="customWorkTypeField" class="custom-work-type hidden">
+          其它工作內容<span>*</span>
+          <input id="customWorkType" maxlength="300" placeholder="例如：清運家具、修補磁磚">
+        </label>
       </div>
 
       <div class="wide form-section">

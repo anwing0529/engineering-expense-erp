@@ -47,4 +47,13 @@ dialog{border:0;border-radius:20px;padding:0;width:min(92vw,680px);box-shadow:0 
 .dispatch-calculation strong{color:var(--primary);font-size:18px}
 @media(max-width:800px){.dispatch-list{grid-template-columns:1fr}}
 @media(max-width:640px){.dispatch-stats{grid-template-columns:1fr 1fr}.employee-options{grid-template-columns:1fr}.dispatch-calculation{grid-template-columns:1fr}.dispatch-calculation div{text-align:left}.dispatch-card{padding:15px}}
+
+.work-type-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.work-type-option{display:flex;grid-template-columns:none;align-items:center;justify-content:center;gap:7px;min-height:48px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--muted);cursor:pointer;transition:.18s}
+.work-type-option input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.work-type-option .material-symbols-rounded{color:#8ba0ba;font-size:22px}
+.work-type-option.selected{border-color:var(--primary);background:#e8f0fe;color:var(--primary);box-shadow:0 0 0 2px rgba(21,101,192,.08)}
+.work-type-option.selected .material-symbols-rounded{color:var(--primary)}
+.custom-work-type{margin-top:12px}
+@media(max-width:640px){.work-type-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>

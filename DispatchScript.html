@@ -4,7 +4,6 @@ function bindDispatchEvents() {
   $$('.close-dispatch-dialog').forEach(btn =>
     btn.addEventListener('click', () => $('#dispatchDialog').close()));
   $('#dispatchForm').addEventListener('submit', submitDispatch);
-  $('#addWorkItemBtn').addEventListener('click', addDispatchWorkItem);
   $('#refreshDispatchBtn').addEventListener('click', loadDispatch);
   ['#dispatchWorkQuote', '#dispatchMaterialQuote', '#dispatchAllocationTotal']
     .forEach(selector => $(selector).addEventListener('input', updateDispatchCalculation));
@@ -64,42 +63,43 @@ async function openDispatchDialog() {
   const form = $('#dispatchForm');
   form.reset();
   $('#dispatchDate').value = new Date().toLocaleDateString('en-CA');
-  renderWorkItemEditor(['']);
+  renderDispatchWorkTypes();
   renderDispatchEmployees();
   updateDispatchCalculation();
   $('#dispatchDialog').showModal();
 }
 
-function renderWorkItemEditor(items) {
-  $('#dispatchWorkItems').innerHTML = items.map((item, index) =>
-    '<div class="work-item-row"><span>' + (index + 1) + '</span>' +
-    '<input class="work-item-input" maxlength="300" value="' + escapeHtml(item) +
-    '" placeholder="例如：退租清潔" required>' +
-    '<button type="button" class="icon-btn remove-work-item" title="刪除">' +
-    '<span class="material-symbols-rounded">delete</span></button></div>').join('');
-  $$('.remove-work-item', $('#dispatchWorkItems')).forEach(button =>
-    button.addEventListener('click', () => {
-      if ($$('.work-item-row', $('#dispatchWorkItems')).length === 1) return;
-      button.closest('.work-item-row').remove();
-      renumberWorkItems();
+function renderDispatchWorkTypes() {
+  const workTypes = state.dispatchData?.workTypes || [];
+  const otherValue = state.dispatchData?.otherWorkTypeValue || '__OTHER_WORK__';
+  const options = workTypes.map(type =>
+    '<label class="work-type-option"><input class="work-type-checkbox" type="checkbox" value="' +
+    escapeHtml(type) + '"><span class="material-symbols-rounded">check_box_outline_blank</span><strong>' +
+    escapeHtml(type) + '</strong></label>').join('');
+  const otherOption =
+    '<label class="work-type-option"><input class="work-type-checkbox" type="checkbox" value="' +
+    escapeHtml(otherValue) + '"><span class="material-symbols-rounded">check_box_outline_blank</span><strong>其它</strong></label>';
+  $('#dispatchWorkTypeOptions').innerHTML = options + otherOption;
+  $$('.work-type-checkbox', $('#dispatchWorkTypeOptions')).forEach(input =>
+    input.addEventListener('change', () => {
+      const icon = input.nextElementSibling;
+      icon.textContent = input.checked ? 'check_box' : 'check_box_outline_blank';
+      input.closest('.work-type-option').classList.toggle('selected', input.checked);
+      toggleCustomWorkType();
     })
   );
+  toggleCustomWorkType();
 }
 
-function addDispatchWorkItem() {
-  const values = $$('.work-item-input', $('#dispatchWorkItems'))
-    .map(input => input.value);
-  if (values.length >= 20) return toast('工作項目最多 20 項。', true);
-  values.push('');
-  renderWorkItemEditor(values);
-  $$('.work-item-input', $('#dispatchWorkItems')).at(-1).focus();
+function toggleCustomWorkType() {
+  const otherValue = state.dispatchData?.otherWorkTypeValue || '__OTHER_WORK__';
+  const other = $$('.work-type-checkbox', $('#dispatchWorkTypeOptions'))
+    .find(input => input.value === otherValue);
+  const enabled = Boolean(other?.checked);
+  $('#customWorkTypeField').classList.toggle('hidden', !enabled);
+  $('#customWorkType').required = enabled;
+  if (!enabled) $('#customWorkType').value = '';
 }
-
-function renumberWorkItems() {
-  $$('.work-item-row', $('#dispatchWorkItems')).forEach((row, index) =>
-    row.querySelector('span').textContent = index + 1);
-}
-
 function renderDispatchEmployees() {
   const employees = state.dispatchData?.employees || [];
   $('#dispatchEmployeeOptions').innerHTML = employees.length
@@ -107,7 +107,7 @@ function renderDispatchEmployees() {
       '<label class="employee-option"><input type="checkbox" value="' +
       escapeHtml(employee.email) + '"><span><strong>' + escapeHtml(employee.name) +
       '</strong><small>' + escapeHtml(employee.email) + '</small></span></label>').join('')
-    : '<div class="empty">尚無啟用員工，請先到報帳_員工新增帳號。</div>';
+    : '<div class="empty">尚無啟用的一般員工，請先到報帳_員工新增 EMPLOYEE 帳號。</div>';
   $$('input[type="checkbox"]', $('#dispatchEmployeeOptions')).forEach(input =>
     input.addEventListener('change', updateDispatchCalculation));
 }
@@ -130,8 +130,15 @@ async function submitDispatch(e) {
   button.textContent = '建立中…';
   try {
     const data = Object.fromEntries(new FormData(e.target).entries());
-    data.workItems = $$('.work-item-input', $('#dispatchWorkItems'))
-      .map(input => input.value.trim()).filter(Boolean);
+    const otherValue = state.dispatchData?.otherWorkTypeValue || '__OTHER_WORK__';
+    const selectedWorkTypes = $$('.work-type-checkbox:checked', $('#dispatchWorkTypeOptions'))
+      .map(input => input.value);
+    data.workItems = selectedWorkTypes.filter(value => value !== otherValue);
+    if (selectedWorkTypes.includes(otherValue)) {
+      const customWorkType = $('#customWorkType').value.trim();
+      if (!customWorkType) throw new Error('請輸入其它工作內容。');
+      data.workItems.push(customWorkType);
+    }
     data.assigneeEmails =
       $$('input[type="checkbox"]:checked', $('#dispatchEmployeeOptions'))
         .map(input => input.value);
