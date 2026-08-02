@@ -1,5 +1,5 @@
 <script>
-const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], adminData: null };
+const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], adminData: null, dispatchData: null };
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const money = value => 'NT$ ' + Number(value || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
@@ -32,6 +32,7 @@ async function init() {
 }
 
 function bindEvents() {
+  bindDispatchEvents();
   $('#loginForm').addEventListener('submit', handleLogin);
   $('#logoutBtn').addEventListener('click', () => {
     clearSession();
@@ -66,20 +67,24 @@ function enterApp() {
   $('#loginView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
   $('#userName').textContent = state.user.name;
-  $('#adminNav').classList.toggle('hidden', state.user.role !== 'ADMIN');
+  const isAdmin = state.user.role === 'ADMIN';
+  $('#dispatchNav').classList.toggle('hidden', !isAdmin);
+  $('#adminNav').classList.toggle('hidden', !isAdmin);
   fillProjectSelect();
   fillSelect($('#expenseCategory'), state.bootstrap.categories, '請選擇類別');
-  loadMine();
+  if (isAdmin) switchView('dispatch');
+  else loadMine();
 }
 
 function showLogin() { $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); }
 function clearSession() { state.token = ''; localStorage.removeItem('expense_session'); localStorage.removeItem('expense_user'); }
 function switchView(view) {
-  if (view === 'admin' && state.user.role !== 'ADMIN') return;
+  if (['admin', 'dispatch'].includes(view) && state.user.role !== 'ADMIN') return;
   $$('.view').forEach(x => x.classList.add('hidden'));
   $('#' + view + 'View').classList.remove('hidden');
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === view));
   if (view === 'admin') loadAdmin();
+  if (view === 'dispatch') loadDispatch();
 }
 
 async function loadMine() {

@@ -1,0 +1,149 @@
+<script>
+function bindDispatchEvents() {
+  $('#openDispatchBtn').addEventListener('click', openDispatchDialog);
+  $$('.close-dispatch-dialog').forEach(btn =>
+    btn.addEventListener('click', () => $('#dispatchDialog').close()));
+  $('#dispatchForm').addEventListener('submit', submitDispatch);
+  $('#addWorkItemBtn').addEventListener('click', addDispatchWorkItem);
+  $('#refreshDispatchBtn').addEventListener('click', loadDispatch);
+  ['#dispatchWorkQuote', '#dispatchMaterialQuote', '#dispatchAllocationTotal']
+    .forEach(selector => $(selector).addEventListener('input', updateDispatchCalculation));
+}
+
+async function loadDispatch() {
+  if (state.user.role !== 'ADMIN') return;
+  setLoading(true);
+  try {
+    state.dispatchData = await gas('getDispatchBootstrap', state.token);
+    renderDispatch();
+  } catch (e) {
+    toast(errorText(e), true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderDispatch() {
+  const tasks = state.dispatchData?.tasks || [];
+  $('#dispatchTotalCount').textContent = tasks.length;
+  $('#dispatchPendingCount').textContent = tasks.filter(task => task.status === '待接單').length;
+  $('#dispatchActiveCount').textContent = tasks.filter(task =>
+    ['已接單', '施工中', '待驗收'].includes(task.status)).length;
+  $('#dispatchQuoteTotal').textContent =
+    money(tasks.reduce((sum, task) => sum + task.totalQuote, 0));
+  $('#dispatchTaskList').innerHTML = tasks.length
+    ? tasks.map(dispatchTaskCard).join('')
+    : '<div class="empty">尚無派工任務</div>';
+}
+
+function dispatchTaskCard(task) {
+  const items = task.workItems.map(item =>
+    '<li>' + escapeHtml(item.content) + '</li>').join('');
+  const employees = task.assignees.map(employee =>
+    '<span class="assignee-chip">' + escapeHtml(employee.name) + '</span>').join('');
+  const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' +
+    encodeURIComponent(task.address);
+  return '<article class="dispatch-card">' +
+    '<div class="dispatch-card-head"><div><small>' + escapeHtml(task.id) +
+    '</small><h3>' + escapeHtml(task.name) + '</h3></div><span class="chip">' +
+    escapeHtml(task.status) + '</span></div>' +
+    '<a class="dispatch-address" href="' + mapUrl +
+    '" target="_blank" rel="noopener"><span class="material-symbols-rounded">location_on</span>' +
+    escapeHtml(task.address) + '</a>' +
+    '<div class="dispatch-meta"><span>預定 ' + escapeHtml(task.scheduledDate) +
+    '</span><span>總報價 ' + money(task.totalQuote) +
+    '</span><span>每人 ' + money(task.perPersonAmount) + '</span></div>' +
+    '<ol class="dispatch-items">' + items + '</ol>' +
+    '<div class="assignee-row">' + employees + '</div>' +
+    (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
+    '</article>';
+}
+
+async function openDispatchDialog() {
+  if (!state.dispatchData) await loadDispatch();
+  const form = $('#dispatchForm');
+  form.reset();
+  $('#dispatchDate').value = new Date().toLocaleDateString('en-CA');
+  renderWorkItemEditor(['']);
+  renderDispatchEmployees();
+  updateDispatchCalculation();
+  $('#dispatchDialog').showModal();
+}
+
+function renderWorkItemEditor(items) {
+  $('#dispatchWorkItems').innerHTML = items.map((item, index) =>
+    '<div class="work-item-row"><span>' + (index + 1) + '</span>' +
+    '<input class="work-item-input" maxlength="300" value="' + escapeHtml(item) +
+    '" placeholder="例如：退租清潔" required>' +
+    '<button type="button" class="icon-btn remove-work-item" title="刪除">' +
+    '<span class="material-symbols-rounded">delete</span></button></div>').join('');
+  $$('.remove-work-item', $('#dispatchWorkItems')).forEach(button =>
+    button.addEventListener('click', () => {
+      if ($$('.work-item-row', $('#dispatchWorkItems')).length === 1) return;
+      button.closest('.work-item-row').remove();
+      renumberWorkItems();
+    })
+  );
+}
+
+function addDispatchWorkItem() {
+  const values = $$('.work-item-input', $('#dispatchWorkItems'))
+    .map(input => input.value);
+  if (values.length >= 20) return toast('工作項目最多 20 項。', true);
+  values.push('');
+  renderWorkItemEditor(values);
+  $$('.work-item-input', $('#dispatchWorkItems')).at(-1).focus();
+}
+
+function renumberWorkItems() {
+  $$('.work-item-row', $('#dispatchWorkItems')).forEach((row, index) =>
+    row.querySelector('span').textContent = index + 1);
+}
+
+function renderDispatchEmployees() {
+  const employees = state.dispatchData?.employees || [];
+  $('#dispatchEmployeeOptions').innerHTML = employees.length
+    ? employees.map(employee =>
+      '<label class="employee-option"><input type="checkbox" value="' +
+      escapeHtml(employee.email) + '"><span><strong>' + escapeHtml(employee.name) +
+      '</strong><small>' + escapeHtml(employee.email) + '</small></span></label>').join('')
+    : '<div class="empty">尚無啟用員工，請先到報帳_員工新增帳號。</div>';
+  $$('input[type="checkbox"]', $('#dispatchEmployeeOptions')).forEach(input =>
+    input.addEventListener('change', updateDispatchCalculation));
+}
+
+function updateDispatchCalculation() {
+  const workQuote = Number($('#dispatchWorkQuote').value || 0);
+  const materialQuote = Number($('#dispatchMaterialQuote').value || 0);
+  const allocation = Number($('#dispatchAllocationTotal').value || 0);
+  const count =
+    $$('input[type="checkbox"]:checked', $('#dispatchEmployeeOptions')).length;
+  $('#dispatchTotalQuote').textContent = money(workQuote + materialQuote);
+  $('#dispatchAssigneeCount').textContent = count + ' 人';
+  $('#dispatchPerPerson').textContent = money(count ? allocation / count : 0);
+}
+
+async function submitDispatch(e) {
+  e.preventDefault();
+  const button = $('#submitDispatchBtn');
+  button.disabled = true;
+  button.textContent = '建立中…';
+  try {
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    data.workItems = $$('.work-item-input', $('#dispatchWorkItems'))
+      .map(input => input.value.trim()).filter(Boolean);
+    data.assigneeEmails =
+      $$('input[type="checkbox"]:checked', $('#dispatchEmployeeOptions'))
+        .map(input => input.value);
+    const result = await gas('createDispatchTask', data, state.token);
+    toast(result.message + ' 編號：' + result.id);
+    $('#dispatchDialog').close();
+    await loadDispatch();
+  } catch (err) {
+    toast(errorText(err), true);
+  } finally {
+    button.disabled = false;
+    button.textContent = '建立派工';
+  }
+}
+</script>
