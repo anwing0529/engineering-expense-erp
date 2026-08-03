@@ -1,5 +1,5 @@
 <script>
-const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], workOrders: [], adminData: null, dispatchData: null };
+const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], workOrders: [], workReportPhotos: [], workReportReceipts: [], adminData: null, dispatchData: null };
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const money = value => 'NT$ ' + Number(value || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
@@ -50,8 +50,11 @@ function bindEvents() {
   });
   $$('.close-work-report').forEach(btn => btn.addEventListener('click', () => $('#workReportDialog').close()));
   $('#workReportForm').addEventListener('submit', submitWorkReport);
-  $('#completionPhotoInput').addEventListener('change', previewCompletionPhotos);
-  $('#workReportReceiptInput').addEventListener('change', previewWorkReportReceipt);
+  $('#completionPhotoInput').addEventListener('change', e => addWorkReportFiles(e, 'photos'));
+  $('#workReportReceiptInput').addEventListener('change', e => addWorkReportFiles(e, 'receipts'));
+  $('#completionPhotoPreview').addEventListener('click', removeWorkReportFile);
+  $('#workReportReceiptPreview').addEventListener('click', removeWorkReportFile);
+  $('#workReportForm').addEventListener('change', toggleWorkReportOtherCategory);
   $('#adminKeyword').addEventListener('input', debounce(loadAdmin, 350));
   $('#adminMonth').addEventListener('change', loadAdmin);
   $('#clearFiltersBtn').addEventListener('click', () => { $('#adminKeyword').value = ''; $('#adminMonth').value = ''; loadAdmin(); });
@@ -149,8 +152,10 @@ function openWorkReport(taskId) {
     const done = completed.has(item.id);
     return '<label class="report-work-item' + (done ? ' completed' : '') + '"><input type="checkbox" value="' + escapeHtml(item.id) + '" ' + (done ? 'checked disabled' : '') + '><span class="report-item-number">' + (index + 1) + '</span><span>' + escapeHtml(item.content) + '</span><small>' + (done ? '已回報完成' : '完成後勾選') + '</small></label>';
   }).join('');
-  resetPhotoPreview();
-  $('#workReportReceiptPreview').classList.add('hidden');
+  state.workReportPhotos = [];
+  state.workReportReceipts = [];
+  renderWorkReportFiles();
+  toggleWorkReportOtherCategory();
   $('#workReportDialog').showModal();
 }
 
@@ -159,13 +164,17 @@ async function submitWorkReport(e) {
   const button = $('#submitWorkReportBtn');
   button.disabled = true; button.textContent = '送出中…';
   try {
-    const receiptFile = $('#workReportReceiptInput').files[0];
+    if (!state.workReportPhotos.length) throw new Error('請至少上傳 1 張完工照片。');
+    const selectedCategory = $('input[name="workReportCategory"]:checked');
     const payload = {
       taskId: $('#workReportTaskId').value,
       completedItemIds: $$('#workReportItems input:checked:not(:disabled)').map(input => input.value),
-      materialAmount: $('#workReportMaterialAmount').value,
+      category: selectedCategory ? selectedCategory.value : '',
+      otherCategory: $('#workReportOtherCategory').value.trim(),
+      amount: $('#workReportMaterialAmount').value,
       note: $('#workReportNote').value.trim(),
-      receipt: receiptFile ? { data: await fileBase64(receiptFile), mimeType: receiptFile.type, name: receiptFile.name } : null
+      completionPhotos: await Promise.all(state.workReportPhotos.map(serializeWorkReportFile)),
+      receipts: await Promise.all(state.workReportReceipts.map(serializeWorkReportFile))
     };
     const result = await gas('submitDispatchWorkReport', payload, state.token);
     toast(result.message);
@@ -175,26 +184,65 @@ async function submitWorkReport(e) {
   finally { button.disabled = false; button.textContent = '送出工單回報'; }
 }
 
-function previewCompletionPhotos(e) {
-  const files = [...e.target.files].filter(file => file.type.startsWith('image/')).slice(0, 8);
-  const box = $('#completionPhotoPreview');
-  box.innerHTML = files.length ? files.map(file => '<figure><img src="' + URL.createObjectURL(file) + '" alt="完工照片預覽"><figcaption>' + escapeHtml(file.name) + '</figcaption></figure>').join('') : photoPreviewPlaceholder();
+function toggleWorkReportOtherCategory() {
+  const selected = $('input[name="workReportCategory"]:checked');
+  const isOther = selected && selected.value === '__OTHER_EXPENSE__';
+  $('#workReportOtherCategoryField').classList.toggle('hidden', !isOther);
+  $('#workReportOtherCategory').required = Boolean(isOther);
+  if (!isOther) $('#workReportOtherCategory').value = '';
 }
 
-function previewWorkReportReceipt(e) {
-  const file = e.target.files[0], box = $('#workReportReceiptPreview');
-  if (!file) return box.classList.add('hidden');
-  if (file.size > 8 * 1024 * 1024) { e.target.value = ''; return toast('收據不可超過 8MB。', true); }
-  box.classList.remove('hidden');
-  box.innerHTML = file.type.startsWith('image/') ? '<img src="' + URL.createObjectURL(file) + '" alt="材料收據預覽">' : '<span>' + escapeHtml(file.name) + '</span>';
+function addWorkReportFiles(e, kind) {
+  const incoming = [...e.target.files];
+  const allowPdf = kind === 'receipts';
+  const invalid = incoming.find(file =>
+    file.size > 8 * 1024 * 1024 ||
+    (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) &&
+      !(allowPdf && file.type === 'application/pdf')));
+  if (invalid) {
+    e.target.value = '';
+    return toast('檔案格式不支援，或單一檔案超過 8MB。', true);
+  }
+  const key = kind === 'photos' ? 'workReportPhotos' : 'workReportReceipts';
+  if (state[key].length + incoming.length > 10) {
+    e.target.value = '';
+    return toast('同一類附件最多 10 個檔案。', true);
+  }
+  state[key] = state[key].concat(incoming);
+  e.target.value = '';
+  renderWorkReportFiles();
 }
 
-function resetPhotoPreview() {
-  $('#completionPhotoPreview').innerHTML = photoPreviewPlaceholder();
+function removeWorkReportFile(e) {
+  const button = e.target.closest('[data-file-kind][data-file-index]');
+  if (!button) return;
+  const key = button.dataset.fileKind === 'photos' ? 'workReportPhotos' : 'workReportReceipts';
+  state[key].splice(Number(button.dataset.fileIndex), 1);
+  renderWorkReportFiles();
 }
 
-function photoPreviewPlaceholder() {
-  return '<div class="photo-preview-placeholder"><span class="material-symbols-rounded">add_photo_alternate</span><span>選擇照片後在此預覽</span></div>';
+function renderWorkReportFiles() {
+  renderWorkReportFileGroup('#completionPhotoPreview', state.workReportPhotos, 'photos',
+    '<div class="photo-preview-placeholder"><span class="material-symbols-rounded">add_photo_alternate</span><span>請新增至少 1 張完工照片</span></div>');
+  renderWorkReportFileGroup('#workReportReceiptPreview', state.workReportReceipts, 'receipts',
+    '<div class="photo-preview-placeholder optional"><span class="material-symbols-rounded">receipt_long</span><span>材料收據為選填</span></div>');
+}
+
+function renderWorkReportFileGroup(selector, files, kind, emptyHtml) {
+  $(selector).innerHTML = files.length ? files.map((file, index) => {
+    const preview = file.type.startsWith('image/')
+      ? '<img src="' + URL.createObjectURL(file) + '" alt="附件預覽">'
+      : '<span class="material-symbols-rounded file-icon">picture_as_pdf</span>';
+    return '<figure>' + preview + '<figcaption>' + escapeHtml(file.name) + '</figcaption>' +
+      '<button type="button" class="remove-preview" data-file-kind="' + kind +
+      '" data-file-index="' + index + '" aria-label="移除附件">×</button></figure>';
+  }).join('') : emptyHtml;
+}
+
+function serializeWorkReportFile(file) {
+  return fileBase64(file).then(data => ({
+    data: data, mimeType: file.type, name: file.name
+  }));
 }
 async function loadMine() {
   try {
