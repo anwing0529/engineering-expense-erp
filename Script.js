@@ -20,14 +20,8 @@ async function init() {
         enterApp();
       } catch (e) {
         clearSession();
-        if (state.bootstrap.user) {
-          state.user = state.bootstrap.user;
-          enterApp();
-        } else showLogin();
+        showLogin();
       }
-    } else if (state.bootstrap.user) {
-      state.user = state.bootstrap.user;
-      enterApp();
     } else showLogin();
   } catch (e) {
     showLogin();

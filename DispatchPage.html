@@ -18,7 +18,7 @@
 <dialog id="dispatchDialog" class="dispatch-dialog">
   <form id="dispatchForm" method="dialog">
     <div class="dialog-head">
-      <div><h3>新增派工</h3><small>建立後將寫入派工專用工作表</small></div>
+      <div><h3 id="dispatchDialogTitle">新增派工</h3><small id="dispatchDialogSubtitle">建立後將寫入派工專用工作表</small></div>
       <button type="button" class="icon-btn close-dispatch-dialog"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="form-grid">
@@ -29,7 +29,7 @@
       <label>客戶名稱<input name="customerName" maxlength="100" placeholder="選填"></label>
       <label>客戶電話<input name="customerPhone" maxlength="50" inputmode="tel" placeholder="選填"></label>
 
-      <div class="wide form-section">
+      <div id="dispatchWorkSection" class="wide form-section">
         <div class="section-title">
           <strong>工作內容<span>*</span></strong>
           <small>可複選</small>
@@ -41,12 +41,13 @@
         </label>
       </div>
 
-      <div class="wide form-section">
+      <div id="dispatchEmployeeSection" class="wide form-section">
         <div class="section-title"><strong>指派員工<span>*</span></strong><small>可複選</small></div>
         <div id="dispatchEmployeeOptions" class="employee-options"></div>
       </div>
 
-            <label class="wide">工程報價<input id="dispatchWorkQuote" name="workQuote" type="number" min="0" max="100000000" step="1" value="0"></label>
+            <div id="dispatchEditNotice" class="wide dispatch-edit-notice hidden">修改基本資料時，工作內容與指派員工保持原樣。</div>
+      <label class="wide">工程報價<input id="dispatchWorkQuote" name="workQuote" type="number" min="0" max="100000000" step="1" value="0"></label>
 
       <label class="wide">備註<textarea name="note" rows="3" maxlength="500" placeholder="交代事項、進場方式或其他說明"></textarea></label>
     </div>

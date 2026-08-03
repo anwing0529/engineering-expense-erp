@@ -5,6 +5,10 @@ function bindDispatchEvents() {
     btn.addEventListener('click', () => $('#dispatchDialog').close()));
   $('#dispatchForm').addEventListener('submit', submitDispatch);
   $('#refreshDispatchBtn').addEventListener('click', loadDispatch);
+  $('#dispatchTaskList').addEventListener('click', event => {
+    const button = event.target.closest('.edit-dispatch-task');
+    if (button) openDispatchEditDialog(button.dataset.taskId);
+  });
 }
 
 async function loadDispatch() {
@@ -53,18 +57,64 @@ function dispatchTaskCard(task) {
     '<ol class="dispatch-items">' + items + '</ol>' +
     '<div class="assignee-row">' + employees + '</div>' +
     (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
+    (isDispatchLockedStatusClient(task.status)
+      ? '<div class="dispatch-card-actions"><span class="locked-hint">已結案，停止修改</span></div>'
+      : '<div class="dispatch-card-actions"><button type="button" class="btn outlined small edit-dispatch-task" data-task-id="' + escapeHtml(task.id) + '"><span class="material-symbols-rounded">edit</span>修改派工</button></div>') +
     '</article>';
 }
 
 async function openDispatchDialog() {
   if (!state.dispatchData) await loadDispatch();
+  state.editingDispatchTaskId = '';
   const form = $('#dispatchForm');
   form.reset();
+  $('#dispatchDialogTitle').textContent = '新增派工';
+  $('#dispatchDialogSubtitle').textContent = '建立後將寫入派工專用工作表';
+  $('#submitDispatchBtn').textContent = '建立派工';
+  $('#dispatchWorkSection').classList.remove('hidden');
+  $('#dispatchEmployeeSection').classList.remove('hidden');
+  $('#dispatchEditNotice').classList.add('hidden');
   $('#dispatchDate').value = new Date().toLocaleDateString('en-CA');
   renderDispatchAddresses();
   renderDispatchWorkTypes();
   renderDispatchEmployees();
   $('#dispatchDialog').showModal();
+}
+
+function openDispatchEditDialog(taskId) {
+  const task = state.dispatchData?.tasks?.find(item => item.id === taskId);
+  if (!task) return toast('找不到派工資料，請重新整理。', true);
+  if (isDispatchLockedStatusClient(task.status)) return toast('此工單已結案，不可修改。', true);
+  state.editingDispatchTaskId = task.id;
+  const form = $('#dispatchForm');
+  form.reset();
+  renderDispatchAddresses();
+  $('#dispatchDialogTitle').textContent = '修改派工';
+  $('#dispatchDialogSubtitle').textContent = task.id + '｜工作內容與指派員工保持原樣';
+  $('#submitDispatchBtn').textContent = '儲存修改';
+  $('#dispatchWorkSection').classList.add('hidden');
+  $('#dispatchEmployeeSection').classList.add('hidden');
+  $('#dispatchEditNotice').classList.remove('hidden');
+  $('#dispatchProjectName').value = task.name;
+  $('#dispatchDate').value = String(task.scheduledDate || '').replaceAll('/', '-');
+  form.elements.customerName.value = task.customerName || '';
+  form.elements.customerPhone.value = task.customerPhone || '';
+  $('#dispatchWorkQuote').value = task.workQuote || 0;
+  form.elements.note.value = task.note || '';
+  const select = $('#dispatchAddressSelect');
+  if ([...select.options].some(option => option.value === task.address)) {
+    select.value = task.address;
+    toggleCustomDispatchAddress();
+  } else {
+    select.value = state.dispatchData?.otherAddressValue || '__OTHER_ADDRESS__';
+    toggleCustomDispatchAddress();
+    $('#customDispatchAddress').value = task.address;
+  }
+  $('#dispatchDialog').showModal();
+}
+
+function isDispatchLockedStatusClient(status) {
+  return ['已完成', '已結案', '完工結案'].includes(String(status || '').trim());
 }
 
 function renderDispatchAddresses() {
@@ -145,7 +195,7 @@ async function submitDispatch(e) {
   e.preventDefault();
   const button = $('#submitDispatchBtn');
   button.disabled = true;
-  button.textContent = '建立中…';
+  button.textContent = state.editingDispatchTaskId ? '儲存中…' : '建立中…';
   try {
     const data = Object.fromEntries(new FormData(e.target).entries());
     const selectedAddress = $('#dispatchAddressSelect').value;
@@ -155,6 +205,15 @@ async function submitDispatch(e) {
       ? $('#customDispatchAddress').value.trim()
       : selectedAddress;
     if (!data.address) throw new Error('請選擇或輸入工程地址。');
+    if (state.editingDispatchTaskId) {
+      data.taskId = state.editingDispatchTaskId;
+      const result = await gas('updateDispatchTask', data, state.token);
+      toast(result.message);
+      state.editingDispatchTaskId = '';
+      $('#dispatchDialog').close();
+      await loadDispatch();
+      return;
+    }
     data.materialQuote = 0;
     data.allocationTotal = 0;
 
