@@ -1,5 +1,5 @@
 <div class="page-head">
-  <div><p class="eyebrow">EMPLOYEE</p><h2>我的報帳</h2><p>新增支出並追蹤自己的歷史紀錄</p></div>
+  <div><p class="eyebrow">EMPLOYEE</p><h2>我的工單與報帳</h2><p>點選派工卡片回報工作進度與材料費</p></div>
   <button id="openExpenseBtn" class="btn primary"><span class="material-symbols-rounded">add</span>新增報帳</button>
 </div>
 
@@ -7,6 +7,11 @@
   <article class="stat-card"><span class="material-symbols-rounded blue">payments</span><div><small>我的累計金額</small><strong id="myTotal">NT$ 0</strong></div></article>
   <article class="stat-card"><span class="material-symbols-rounded green">description</span><div><small>報帳筆數</small><strong id="myCount">0</strong></div></article>
 </div>
+
+<section class="card work-order-section">
+  <div class="card-title"><div><h3>我的派工任務</h3><p>點選卡片進入工單回報</p></div><button id="refreshWorkOrdersBtn" class="icon-btn" title="重新整理"><span class="material-symbols-rounded">refresh</span></button></div>
+  <div id="employeeWorkOrderList" class="employee-work-orders"><div class="empty">正在載入派工任務…</div></div>
+</section>
 
 <section class="card">
   <div class="card-title"><h3>歷史報帳</h3><button id="refreshMineBtn" class="icon-btn" title="重新整理"><span class="material-symbols-rounded">refresh</span></button></div>
@@ -16,6 +21,26 @@
   </div>
 </section>
 
+<dialog id="workReportDialog" class="work-report-dialog">
+  <form id="workReportForm" method="dialog">
+    <input id="workReportTaskId" name="taskId" type="hidden">
+    <div class="dialog-head"><div><small id="workReportTaskCode"></small><h3 id="workReportTaskName">工單回報</h3></div><button type="button" class="icon-btn close-work-report"><span class="material-symbols-rounded">close</span></button></div>
+    <a id="workReportAddress" class="dispatch-address" href="#" target="_blank" rel="noopener"></a>
+    <div class="form-grid">
+      <section class="form-section wide">
+        <div class="section-title"><strong>工作內容<span>*</span></strong><small>完成的項目請打勾</small></div>
+        <div id="workReportItems" class="report-work-items"></div>
+      </section>
+      <label>報帳材料費<span>*</span><input id="workReportMaterialAmount" name="materialAmount" type="number" inputmode="decimal" min="0" max="100000000" step="1" value="0" required></label>
+      <label class="wide">註記內容<textarea id="workReportNote" name="note" rows="3" maxlength="500" placeholder="例如：牆面已補漆，浴室清潔完成"></textarea></label>
+      <label class="wide">完工照片（目前僅預覽）<input id="completionPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>照片目前不會上傳或寫入試算表</small></label>
+      <div id="completionPhotoPreview" class="photo-preview-grid wide"><div class="photo-preview-placeholder"><span class="material-symbols-rounded">add_photo_alternate</span><span>選擇照片後在此預覽</span></div></div>
+      <label class="wide">材料收據<span>*</span><input id="workReportReceiptInput" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required><small>收據會上傳至既有 Google Drive 資料夾，最大 8MB</small></label>
+      <div id="workReportReceiptPreview" class="receipt-preview wide hidden"></div>
+    </div>
+    <div class="dialog-actions"><button type="button" class="btn text close-work-report">取消</button><button id="submitWorkReportBtn" type="submit" class="btn primary">送出工單回報</button></div>
+  </form>
+</dialog>
 <dialog id="expenseDialog">
   <form id="expenseForm" method="dialog">
     <div class="dialog-head"><h3>新增報帳</h3><button type="button" class="icon-btn close-dialog"><span class="material-symbols-rounded">close</span></button></div>

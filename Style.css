@@ -56,4 +56,20 @@ dialog{border:0;border-radius:20px;padding:0;width:min(92vw,680px);box-shadow:0 
 .work-type-option.selected .material-symbols-rounded{color:var(--primary)}
 .custom-work-type{margin-top:12px}
 @media(max-width:640px){.work-type-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 員工工單回報模組 */
+.work-order-section .card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.employee-work-orders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.employee-work-order-card{width:100%;border:1px solid var(--line);border-radius:16px;padding:17px;background:linear-gradient(180deg,#fff,#f8fbff);text-align:left;color:var(--text);cursor:pointer;box-shadow:0 4px 16px rgba(21,101,192,.06);transition:.18s}
+.employee-work-order-card:hover{border-color:#90caf9;transform:translateY(-1px);box-shadow:0 8px 22px rgba(21,101,192,.1)}
+.work-order-card-head,.work-order-card-foot{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.work-order-card-head small{color:var(--muted);font-size:11px}.work-order-card-head h4{margin:4px 0 0;font-size:18px}
+.work-order-address{display:flex;align-items:flex-start;gap:6px;margin:14px 0;color:#315b8a;font-size:13px}.work-order-address span{font-size:19px}
+.work-order-progress{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.work-order-progress>div{height:8px;border-radius:99px;background:#e6edf5;overflow:hidden}.work-order-progress>div>span{display:block;height:100%;background:linear-gradient(90deg,#42a5f5,#1565c0)}.work-order-progress small{color:var(--muted)}
+.work-order-card-foot{align-items:center;margin-top:14px;color:var(--muted);font-size:12px}.work-order-card-foot strong{display:flex;align-items:center;color:var(--primary)}.work-order-card-foot strong span{font-size:18px}
+.work-report-dialog{width:min(94vw,760px)}.work-report-dialog .dialog-head small{color:var(--muted)}.work-report-dialog .dialog-head h3{margin:3px 0 0}
+.report-work-items{display:grid;gap:9px}.report-work-item{display:grid;grid-template-columns:22px 30px 1fr auto;align-items:center;gap:8px;padding:11px;border:1px solid var(--line);border-radius:11px;background:#fff;cursor:pointer}.report-work-item input{width:20px;height:20px}.report-work-item small{color:var(--muted)}.report-work-item.completed{background:#eef8f2;color:#16724d}.report-item-number{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:#e8f0fe;color:var(--primary);font-size:12px;font-weight:700}
+.photo-preview-grid{min-height:120px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px;border:1px dashed #9eb7d2;border-radius:13px;background:#f8fbff}.photo-preview-grid figure{margin:0;min-width:0}.photo-preview-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px}.photo-preview-grid figcaption{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:11px;margin-top:4px}.photo-preview-placeholder{grid-column:1/-1;min-height:94px;display:grid;place-items:center;align-content:center;gap:5px;color:#7890aa}.photo-preview-placeholder .material-symbols-rounded{font-size:32px}
+@media(max-width:800px){.employee-work-orders{grid-template-columns:1fr}}
+@media(max-width:640px){.report-work-item{grid-template-columns:22px 28px 1fr}.report-work-item small{grid-column:3}.photo-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
