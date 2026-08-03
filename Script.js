@@ -13,17 +13,23 @@ async function init() {
   try {
     state.bootstrap = await gas('getEmployeeExpenseBootstrap');
     $('#appTitle').textContent = state.bootstrap.appName;
-    if (state.bootstrap.user) {
-      state.user = state.bootstrap.user;
-      enterApp();
-    } else if (state.token) {
+    if (state.token) {
       try {
         state.myRows = await gas('getEmployeeExpenses', state.token);
         const login = JSON.parse(localStorage.getItem('expense_user') || 'null');
         if (!login) throw new Error('登入已過期');
         state.user = login;
         enterApp();
-      } catch (e) { clearSession(); showLogin(); }
+      } catch (e) {
+        clearSession();
+        if (state.bootstrap.user) {
+          state.user = state.bootstrap.user;
+          enterApp();
+        } else showLogin();
+      }
+    } else if (state.bootstrap.user) {
+      state.user = state.bootstrap.user;
+      enterApp();
     } else showLogin();
   } catch (e) {
     showLogin();
