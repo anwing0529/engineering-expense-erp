@@ -82,7 +82,7 @@ function enterApp() {
   fillProjectSelect();
   fillSelect($('#expenseCategory'), state.bootstrap.categories, '請選擇類別');
   if (isAdmin) switchView('dispatch');
-  else { loadMine(); loadWorkOrders(); }
+  else switchView('employee');
 }
 
 function showLogin() { $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); }
@@ -94,14 +94,26 @@ function switchView(view) {
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === view));
   if (view === 'admin') loadAdmin();
   if (view === 'dispatch') loadDispatch();
+  if (view === 'employee') {
+    loadMine();
+    if (state.user.role === 'EMPLOYEE') loadWorkOrders();
+    else renderAdminWorkOrderNotice();
+  }
 }
 
 async function loadWorkOrders() {
-  if (!state.user || state.user.role === 'ADMIN') return;
+  if (!state.user || state.user.role !== 'EMPLOYEE') return renderAdminWorkOrderNotice();
   try {
     state.workOrders = await gas('getMyDispatchWorkOrders', state.token);
     renderWorkOrders();
-  } catch (e) { toast(errorText(e), true); }
+  } catch (e) {
+    $('#employeeWorkOrderList').innerHTML = '<div class="empty error-empty">工單載入失敗：' + escapeHtml(errorText(e)) + '</div>';
+    toast(errorText(e), true);
+  }
+}
+
+function renderAdminWorkOrderNotice() {
+  $('#employeeWorkOrderList').innerHTML = '<div class="empty">目前使用 ADMIN 管理者身分；請到「派工管理」查看全部工單。</div>';
 }
 
 function renderWorkOrders() {
