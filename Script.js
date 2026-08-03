@@ -15,10 +15,8 @@ async function init() {
     $('#appTitle').textContent = state.bootstrap.appName;
     if (state.token) {
       try {
-        state.myRows = await gas('getEmployeeExpenses', state.token);
-        const login = JSON.parse(localStorage.getItem('expense_user') || 'null');
-        if (!login) throw new Error('登入已過期');
-        state.user = login;
+        state.user = await gas('getAuthenticatedEmployeeUser', state.token);
+        localStorage.setItem('expense_user', JSON.stringify(state.user));
         enterApp();
       } catch (e) {
         clearSession();
@@ -82,6 +80,7 @@ function enterApp() {
   $('#loginView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
   $('#userName').textContent = state.user.name;
+  state.user.role = String(state.user.role || 'EMPLOYEE').toUpperCase();
   const isAdmin = state.user.role === 'ADMIN';
   $('#dispatchNav').classList.toggle('hidden', !isAdmin);
   $('#adminNav').classList.toggle('hidden', !isAdmin);
@@ -125,7 +124,7 @@ function renderAdminWorkOrderNotice() {
 function renderWorkOrders() {
   const box = $('#employeeWorkOrderList');
   if (!state.workOrders.length) {
-    box.innerHTML = '<div class="empty">目前沒有指派給您的工單</div>';
+    box.innerHTML = '<div class="empty">目前沒有指派給您的工單，請聯絡管理者進行派工。</div>';
     return;
   }
   box.innerHTML = state.workOrders.map(task => {
