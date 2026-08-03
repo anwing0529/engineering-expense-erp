@@ -5,8 +5,6 @@ function bindDispatchEvents() {
     btn.addEventListener('click', () => $('#dispatchDialog').close()));
   $('#dispatchForm').addEventListener('submit', submitDispatch);
   $('#refreshDispatchBtn').addEventListener('click', loadDispatch);
-  ['#dispatchWorkQuote', '#dispatchMaterialQuote', '#dispatchAllocationTotal']
-    .forEach(selector => $(selector).addEventListener('input', updateDispatchCalculation));
 }
 
 async function loadDispatch() {
@@ -25,7 +23,8 @@ async function loadDispatch() {
 function renderDispatch() {
   const tasks = state.dispatchData?.tasks || [];
   $('#dispatchTotalCount').textContent = tasks.length;
-  $('#dispatchPendingCount').textContent = tasks.filter(task => task.status === '待接單').length;
+  $('#dispatchPendingCount').textContent =
+    tasks.filter(task => task.status === '待接單').length;
   $('#dispatchActiveCount').textContent = tasks.filter(task =>
     ['已接單', '施工中', '待驗收'].includes(task.status)).length;
   $('#dispatchQuoteTotal').textContent =
@@ -50,8 +49,7 @@ function dispatchTaskCard(task) {
     '" target="_blank" rel="noopener"><span class="material-symbols-rounded">location_on</span>' +
     escapeHtml(task.address) + '</a>' +
     '<div class="dispatch-meta"><span>預定 ' + escapeHtml(task.scheduledDate) +
-    '</span><span>總報價 ' + money(task.totalQuote) +
-    '</span><span>每人 ' + money(task.perPersonAmount) + '</span></div>' +
+    '</span><span>工程報價 ' + money(task.totalQuote) + '</span></div>' +
     '<ol class="dispatch-items">' + items + '</ol>' +
     '<div class="assignee-row">' + employees + '</div>' +
     (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
@@ -63,10 +61,40 @@ async function openDispatchDialog() {
   const form = $('#dispatchForm');
   form.reset();
   $('#dispatchDate').value = new Date().toLocaleDateString('en-CA');
+  renderDispatchAddresses();
   renderDispatchWorkTypes();
   renderDispatchEmployees();
-  updateDispatchCalculation();
   $('#dispatchDialog').showModal();
+}
+
+function renderDispatchAddresses() {
+  const projects = state.dispatchData?.projectAddresses || [];
+  const otherValue = state.dispatchData?.otherAddressValue || '__OTHER_ADDRESS__';
+  const options = projects.map(project =>
+    '<option value="' + escapeHtml(project.address) + '" data-name="' +
+    escapeHtml(project.name) + '">' +
+    escapeHtml((project.name ? project.name + '｜' : '') + project.address) +
+    '</option>').join('');
+  $('#dispatchAddressSelect').innerHTML =
+    '<option value="">請選擇工程地址</option>' + options +
+    '<option value="' + escapeHtml(otherValue) + '">其它（自行輸入）</option>';
+  $('#dispatchAddressSelect').onchange = toggleCustomDispatchAddress;
+  toggleCustomDispatchAddress();
+}
+
+function toggleCustomDispatchAddress() {
+  const select = $('#dispatchAddressSelect');
+  const otherValue = state.dispatchData?.otherAddressValue || '__OTHER_ADDRESS__';
+  const isCustom = select.value === otherValue;
+  $('#customDispatchAddressField').classList.toggle('hidden', !isCustom);
+  $('#customDispatchAddress').required = isCustom;
+  if (!isCustom) {
+    $('#customDispatchAddress').value = '';
+    const selectedName = select.selectedOptions[0]?.dataset.name || '';
+    if (selectedName && !$('#dispatchProjectName').value.trim()) {
+      $('#dispatchProjectName').value = selectedName;
+    }
+  }
 }
 
 function renderDispatchWorkTypes() {
@@ -74,16 +102,18 @@ function renderDispatchWorkTypes() {
   const otherValue = state.dispatchData?.otherWorkTypeValue || '__OTHER_WORK__';
   const options = workTypes.map(type =>
     '<label class="work-type-option"><input class="work-type-checkbox" type="checkbox" value="' +
-    escapeHtml(type) + '"><span class="material-symbols-rounded">check_box_outline_blank</span><strong>' +
+    escapeHtml(type) +
+    '"><span class="material-symbols-rounded">check_box_outline_blank</span><strong>' +
     escapeHtml(type) + '</strong></label>').join('');
   const otherOption =
     '<label class="work-type-option"><input class="work-type-checkbox" type="checkbox" value="' +
-    escapeHtml(otherValue) + '"><span class="material-symbols-rounded">check_box_outline_blank</span><strong>其它</strong></label>';
+    escapeHtml(otherValue) +
+    '"><span class="material-symbols-rounded">check_box_outline_blank</span><strong>其它</strong></label>';
   $('#dispatchWorkTypeOptions').innerHTML = options + otherOption;
   $$('.work-type-checkbox', $('#dispatchWorkTypeOptions')).forEach(input =>
     input.addEventListener('change', () => {
-      const icon = input.nextElementSibling;
-      icon.textContent = input.checked ? 'check_box' : 'check_box_outline_blank';
+      input.nextElementSibling.textContent =
+        input.checked ? 'check_box' : 'check_box_outline_blank';
       input.closest('.work-type-option').classList.toggle('selected', input.checked);
       toggleCustomWorkType();
     })
@@ -100,6 +130,7 @@ function toggleCustomWorkType() {
   $('#customWorkType').required = enabled;
   if (!enabled) $('#customWorkType').value = '';
 }
+
 function renderDispatchEmployees() {
   const employees = state.dispatchData?.employees || [];
   $('#dispatchEmployeeOptions').innerHTML = employees.length
@@ -108,19 +139,6 @@ function renderDispatchEmployees() {
       escapeHtml(employee.email) + '"><span><strong>' + escapeHtml(employee.name) +
       '</strong><small>' + escapeHtml(employee.email) + '</small></span></label>').join('')
     : '<div class="empty">尚無啟用的一般員工，請先到報帳_員工新增 EMPLOYEE 帳號。</div>';
-  $$('input[type="checkbox"]', $('#dispatchEmployeeOptions')).forEach(input =>
-    input.addEventListener('change', updateDispatchCalculation));
-}
-
-function updateDispatchCalculation() {
-  const workQuote = Number($('#dispatchWorkQuote').value || 0);
-  const materialQuote = Number($('#dispatchMaterialQuote').value || 0);
-  const allocation = Number($('#dispatchAllocationTotal').value || 0);
-  const count =
-    $$('input[type="checkbox"]:checked', $('#dispatchEmployeeOptions')).length;
-  $('#dispatchTotalQuote').textContent = money(workQuote + materialQuote);
-  $('#dispatchAssigneeCount').textContent = count + ' 人';
-  $('#dispatchPerPerson').textContent = money(count ? allocation / count : 0);
 }
 
 async function submitDispatch(e) {
@@ -130,15 +148,27 @@ async function submitDispatch(e) {
   button.textContent = '建立中…';
   try {
     const data = Object.fromEntries(new FormData(e.target).entries());
+    const selectedAddress = $('#dispatchAddressSelect').value;
+    const otherAddressValue =
+      state.dispatchData?.otherAddressValue || '__OTHER_ADDRESS__';
+    data.address = selectedAddress === otherAddressValue
+      ? $('#customDispatchAddress').value.trim()
+      : selectedAddress;
+    if (!data.address) throw new Error('請選擇或輸入工程地址。');
+    data.materialQuote = 0;
+    data.allocationTotal = 0;
+
     const otherValue = state.dispatchData?.otherWorkTypeValue || '__OTHER_WORK__';
-    const selectedWorkTypes = $$('.work-type-checkbox:checked', $('#dispatchWorkTypeOptions'))
-      .map(input => input.value);
+    const selectedWorkTypes =
+      $$('.work-type-checkbox:checked', $('#dispatchWorkTypeOptions'))
+        .map(input => input.value);
     data.workItems = selectedWorkTypes.filter(value => value !== otherValue);
     if (selectedWorkTypes.includes(otherValue)) {
       const customWorkType = $('#customWorkType').value.trim();
       if (!customWorkType) throw new Error('請輸入其它工作內容。');
       data.workItems.push(customWorkType);
     }
+
     data.assigneeEmails =
       $$('input[type="checkbox"]:checked', $('#dispatchEmployeeOptions'))
         .map(input => input.value);

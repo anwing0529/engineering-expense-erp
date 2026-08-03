@@ -1,5 +1,5 @@
 <div class="page-head">
-  <div><p class="eyebrow">DISPATCH</p><h2>老闆派工</h2><p>建立工程任務、工作內容與員工分配</p></div>
+  <div><p class="eyebrow">DISPATCH</p><h2>老闆派工</h2><p>建立工程地址、工作內容與指派員工</p></div>
   <button id="openDispatchBtn" class="btn primary"><span class="material-symbols-rounded">add_task</span>新增派工</button>
 </div>
 
@@ -22,9 +22,10 @@
       <button type="button" class="icon-btn close-dispatch-dialog"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="form-grid">
-      <label>工程名稱<span>*</span><input name="name" maxlength="100" placeholder="例如：中和連城路退租整理" required></label>
+      <label>工程名稱<span>*</span><input id="dispatchProjectName" name="name" maxlength="100" placeholder="例如：中和連城路退租整理" required></label>
       <label>預定日期<span>*</span><input id="dispatchDate" name="scheduledDate" type="date" required></label>
-      <label class="wide">工程地址<span>*</span><input name="address" maxlength="200" placeholder="例如：中和連城路75巷3弄3號5樓" required></label>
+      <label class="wide">工程地址<span>*</span><select id="dispatchAddressSelect" required></select></label>
+      <label id="customDispatchAddressField" class="wide hidden">其它工程地址<span>*</span><input id="customDispatchAddress" maxlength="200" placeholder="例如：中和連城路75巷3弄3號5樓"></label>
       <label>客戶名稱<input name="customerName" maxlength="100" placeholder="選填"></label>
       <label>客戶電話<input name="customerPhone" maxlength="50" inputmode="tel" placeholder="選填"></label>
 
@@ -45,15 +46,7 @@
         <div id="dispatchEmployeeOptions" class="employee-options"></div>
       </div>
 
-      <label>工作報價<input id="dispatchWorkQuote" name="workQuote" type="number" min="0" max="100000000" step="1" value="0"></label>
-      <label>材料報價<input id="dispatchMaterialQuote" name="materialQuote" type="number" min="0" max="100000000" step="1" value="0"></label>
-      <label class="wide">員工分配總額<input id="dispatchAllocationTotal" name="allocationTotal" type="number" min="0" max="100000000" step="1" value="0" placeholder="例如：3920"></label>
-
-      <div class="wide dispatch-calculation">
-        <div><small>客戶總報價</small><strong id="dispatchTotalQuote">NT$ 0</strong></div>
-        <div><small>指派人數</small><strong id="dispatchAssigneeCount">0 人</strong></div>
-        <div><small>每人預計金額</small><strong id="dispatchPerPerson">NT$ 0</strong></div>
-      </div>
+            <label class="wide">工程報價<input id="dispatchWorkQuote" name="workQuote" type="number" min="0" max="100000000" step="1" value="0"></label>
 
       <label class="wide">備註<textarea name="note" rows="3" maxlength="500" placeholder="交代事項、進場方式或其他說明"></textarea></label>
     </div>
