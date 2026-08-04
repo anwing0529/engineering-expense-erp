@@ -321,7 +321,8 @@ function renderWorkflowProgress(selector, status) {
 
 function renderDispatchStatusOptions(status) {
   const current = normalizeDispatchStage(status);
-  $('#dispatchStatus').innerHTML = DISPATCH_WORKFLOW.map(stage =>
+  const editableStages = DISPATCH_WORKFLOW.filter(stage => stage !== '付款' || current === '付款');
+  $('#dispatchStatus').innerHTML = editableStages.map(stage =>
     '<option value="' + stage + '"' + (stage === current ? ' selected' : '') + '>' +
     stage + '</option>').join('');
   renderWorkflowProgress('#dispatchProgressBar', current);
