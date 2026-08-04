@@ -160,7 +160,8 @@ function renderWorkOrders() {
       const workflowInfo = workflow
         ? '<div class="employee-payment-strip"><div><small>' + escapeHtml(workflow.status) +
           '</small><strong>待付款金額 ' + money(workflow.amount) + '</strong></div>' +
-          '<span>' + escapeHtml(workflow.adminNote || '尚無老闆審核備註') + '</span></div>'
+          '<span>工程費用 ' + money(workflow.engineeringAmount) + '／報帳費用 ' + money(workflow.expenseAmount) + '</span>' +
+          (workflow.adminNote ? '<span>' + escapeHtml(workflow.adminNote) + '</span>' : '') + '</div>'
         : '';
       return '<button type="button" class="employee-work-order-card" data-task-id="' + escapeHtml(task.id) + '">' +
         '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(workflow?.status || task.status) + '</span></div>' +

@@ -72,6 +72,9 @@ function renderAdminDispatchHistory() {
 }
 function dispatchTaskCard(task) {
   const taskReviews = (state.dispatchData?.reviews || []).filter(item => item.taskId === task.id);
+  const reviewEngineering = taskReviews.reduce((sum, item) => sum + Number(item.engineeringAmount || 0), 0);
+  const reviewExpense = taskReviews.reduce((sum, item) => sum + Number(item.expenseAmount || 0), 0);
+  const reviewTotal = taskReviews.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const items = task.workItems.map(item =>
     '<li>' + escapeHtml(item.content) + '</li>').join('');
   const employees = task.assignees.map(employee =>
@@ -88,6 +91,7 @@ function dispatchTaskCard(task) {
     '<div class="dispatch-meta"><span>預定 ' + escapeHtml(task.scheduledDate) +
     '</span><span>工程報價 ' + money(task.totalQuote) + '</span></div>' +
     workflowProgressHtml(dispatchReviewProgressStatus(task.status, taskReviews)) +
+    (taskReviews.length ? '<div class="dispatch-review-cost"><strong>審核總額 ' + money(reviewTotal) + '</strong><small>工程費用 ' + money(reviewEngineering) + '／報帳費用 ' + money(reviewExpense) + '</small></div>' : '') +
     '<ol class="dispatch-items">' + items + '</ol>' +
     '<div class="assignee-row">' + employees + '</div>' +
     (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
@@ -139,7 +143,8 @@ function renderDispatchReviewDetail() {
     return '<article class="review-employee" data-review-email="' + escapeHtml(group.employeeEmail) + '">' +
       '<div class="review-employee-head"><div><h4>' + escapeHtml(group.employeeName) + '</h4><small>' + escapeHtml(group.employeeEmail) + '</small></div><span class="chip">' + escapeHtml(workflow.status) + '</span></div>' +
       reports +
-      '<div class="review-settlement"><label>待付款金額<input class="review-amount" type="number" min="0" max="100000000" value="' + Number(workflow.amount ?? group.totalAmount) + '" ' + (paid ? 'readonly' : '') + '></label>' +
+      '<div class="review-settlement"><div class="review-cost-breakdown"><strong>總共 ' + money(workflow.amount ?? group.totalAmount) + '</strong><small>工程費用 ' + money(workflow.engineeringAmount) + '／報帳費用 ' + money(workflow.expenseAmount) + '</small></div>' +
+      '<label>待付款金額<input class="review-amount" type="number" min="0" max="100000000" value="' + Number(workflow.amount ?? group.totalAmount) + '" ' + (paid ? 'readonly' : '') + '></label>' +
       '<label>老闆審核備註<textarea class="review-admin-note" rows="4" maxlength="1000" ' + (paid ? 'readonly' : '') + '>' + escapeHtml(workflow.adminNote || '') + '</textarea></label>' +
       (workflow.employeeNote ? '<p class="review-party-note"><b>員工請款備註：</b>' + escapeHtml(workflow.employeeNote) + '</p>' : '') +
       '<label>老闆付款備註<textarea class="review-payment-note" rows="3" maxlength="1000" ' + (paid ? 'readonly' : '') + '>' + escapeHtml(workflow.paymentNote || '') + '</textarea></label>' +
