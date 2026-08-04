@@ -108,6 +108,7 @@ async function openDispatchDialog() {
   renderDispatchAddresses();
   renderDispatchWorkTypes();
   renderDispatchEmployees();
+  setDispatchCreateFieldsEnabled(true);
   $('#dispatchDialog').showModal();
 }
 
@@ -124,6 +125,7 @@ function openDispatchEditDialog(taskId) {
   $('#submitDispatchBtn').textContent = '儲存修改';
   $('#dispatchWorkSection').classList.add('hidden');
   $('#dispatchEmployeeSection').classList.add('hidden');
+  setDispatchCreateFieldsEnabled(false);
   $('#dispatchEditNotice').classList.remove('hidden');
   $('#dispatchReadOnlyWorkSection').classList.remove('hidden');
   $('#dispatchProgressSection').classList.remove('hidden');
@@ -149,6 +151,20 @@ function openDispatchEditDialog(taskId) {
   $('#dispatchDialog').showModal();
 }
 
+/**
+ * 修改派工時停用新增專用欄位，避免隱藏的 required 欄位阻擋表單送出。
+ */
+function setDispatchCreateFieldsEnabled(enabled) {
+  ['#dispatchWorkSection', '#dispatchEmployeeSection'].forEach(selector => {
+    $$('input, select, textarea', $(selector)).forEach(field => {
+      field.disabled = !enabled;
+    });
+  });
+  if (!enabled) {
+    $('#customWorkType').required = false;
+    $('#customWorkType').value = '';
+  }
+}
 function isDispatchLockedStatusClient(status) {
   return ['已結案', '完工結案', '付款'].includes(String(status || '').trim());
 }

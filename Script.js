@@ -242,7 +242,10 @@ async function submitWorkReport(e) {
     if (!state.workReportPhotos.length) throw new Error('請至少上傳 1 張完工照片。');
     const selectedCategories = $$('input[name="workReportCategory"]:checked')
       .map(input => input.value);
-    if (!selectedCategories.length) throw new Error('請至少勾選一個費用類別。');
+    const reportAmount = Number($('#workReportMaterialAmount').value || 0);
+    if (reportAmount > 0 && !selectedCategories.length) {
+      throw new Error('有填寫報帳金額時，請至少勾選一個費用類別。');
+    }
     const payload = {
       taskId: $('#workReportTaskId').value,
       completedItemIds: $$('#workReportItems input:checked:not(:disabled)').map(input => input.value),

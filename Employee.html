@@ -36,7 +36,7 @@
         <div id="workReportItems" class="report-work-items"></div>
       </section>
       <section class="form-section wide">
-        <div class="section-title"><strong>報帳費用類別<span>*</span></strong><small>可複選</small></div>
+        <div class="section-title"><strong>報帳費用類別（選填）</strong><small>有費用時可複選</small></div>
         <div class="expense-category-options">
           <label><input type="checkbox" name="workReportCategory" value="工具設備"><span>工具設備</span></label>
           <label><input type="checkbox" name="workReportCategory" value="材料費"><span>材料費</span></label>
@@ -44,9 +44,9 @@
           <label><input type="checkbox" name="workReportCategory" value="雜支"><span>雜支</span></label>
           <label><input type="checkbox" name="workReportCategory" value="__OTHER_EXPENSE__"><span>其它</span></label>
         </div>
-        <label id="workReportOtherCategoryField" class="hidden">其它費用名稱<span>*</span><input id="workReportOtherCategory" maxlength="50" placeholder="請自行輸入"></label>
+        <label id="workReportOtherCategoryField" class="hidden">其它費用說明<span>*</span><textarea id="workReportOtherCategory" rows="4" maxlength="300" placeholder="可分行說明，例如：&#10;停車費 100 元&#10;垃圾清運 500 元"></textarea></label>
       </section>
-      <label>報帳金額<span>*</span><input id="workReportMaterialAmount" name="materialAmount" type="number" inputmode="decimal" min="0" max="100000000" step="1" value="0" required></label>
+      <label>報帳金額（選填）<input id="workReportMaterialAmount" name="materialAmount" type="number" inputmode="decimal" min="0" max="100000000" step="1" value="0" placeholder="沒有費用可留 0"></label>
       <label class="wide">註記內容<textarea id="workReportNote" name="note" rows="3" maxlength="500" placeholder="例如：牆面已補漆，浴室清潔完成"></textarea></label>
       <label class="wide">完工照片<span>*</span><input id="completionPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>至少 1 張，最多 10 張；送出後會上傳 Google Drive</small></label>
       <div id="completionPhotoPreview" class="photo-preview-grid wide"><div class="photo-preview-placeholder"><span class="material-symbols-rounded">add_photo_alternate</span><span>選擇照片後在此預覽</span></div></div>
