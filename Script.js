@@ -1,5 +1,5 @@
 <script>
-const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], workOrders: [], workReportPhotos: [], workReportReceipts: [], adminData: null, dispatchData: null };
+const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], workOrders: [], workReportPhotos: [], workReportReceipts: [], employeeHistoryLimit: 10, adminHistoryLimit: 10, adminData: null, dispatchData: null };
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const money = value => 'NT$ ' + Number(value || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
@@ -42,7 +42,11 @@ function bindEvents() {
   $('#expenseForm').addEventListener('submit', submitExpense);
   $('#expenseProject').addEventListener('change', toggleCustomProject);
   $('#receiptInput').addEventListener('change', previewReceipt);
-  $('#refreshMineBtn').addEventListener('click', loadMine);
+$('#refreshMineBtn').addEventListener('click', refreshEmployeeHistory);
+  $('#loadMoreEmployeeHistoryBtn').addEventListener('click', () => {
+    state.employeeHistoryLimit += 10;
+    renderEmployeeDispatchHistory();
+  });
   $('#refreshWorkOrdersBtn').addEventListener('click', loadWorkOrders);
   $('#employeeWorkOrderList').addEventListener('click', e => {
     const card = e.target.closest('[data-task-id]');
@@ -124,23 +128,86 @@ function renderAdminWorkOrderNotice() {
 
 function renderWorkOrders() {
   const box = $('#employeeWorkOrderList');
-  if (!state.workOrders.length) {
-    box.innerHTML = '<div class="empty">目前沒有指派給您的工單，請聯絡管理者進行派工。</div>';
-    return;
+  const activeTasks = state.workOrders.filter(task => !isCompletedDispatchHistory(task.status));
+  if (!activeTasks.length) {
+    box.innerHTML = '<div class="empty">目前沒有進行中的派工；已完工工單可在下方歷史回查。</div>';
+  } else {
+    box.innerHTML = activeTasks.map(task => {
+      const completed = new Set((task.reports || []).flatMap(report => report.completedItemIds || []));
+      const total = task.workItems.length;
+      const done = task.workItems.filter(item => completed.has(item.id)).length;
+      return '<button type="button" class="employee-work-order-card" data-task-id="' + escapeHtml(task.id) + '">' +
+        '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(task.status) + '</span></div>' +
+        '<p class="work-order-address"><span class="material-symbols-rounded">location_on</span>' + escapeHtml(task.address) + '</p>' +
+        workflowProgressHtml(task.status) +
+        '<div class="work-order-progress"><div><span style="width:' + (total ? done / total * 100 : 0) + '%"></span></div><small>' + done + ' / ' + total + ' 項完成</small></div>' +
+        '<div class="work-order-card-foot"><span>預定 ' + escapeHtml(task.scheduledDate) + '</span><strong>進入工單 <span class="material-symbols-rounded">arrow_forward</span></strong></div></button>';
+    }).join('');
   }
-  box.innerHTML = state.workOrders.map(task => {
-    const completed = new Set((task.reports || []).flatMap(report => report.completedItemIds || []));
-    const total = task.workItems.length;
-    const done = task.workItems.filter(item => completed.has(item.id)).length;
-    return '<button type="button" class="employee-work-order-card" data-task-id="' + escapeHtml(task.id) + '">' +
-      '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(task.status) + '</span></div>' +
-      '<p class="work-order-address"><span class="material-symbols-rounded">location_on</span>' + escapeHtml(task.address) + '</p>' +
-      workflowProgressHtml(task.status) +
-      '<div class="work-order-progress"><div><span style="width:' + (total ? done / total * 100 : 0) + '%"></span></div><small>' + done + ' / ' + total + ' 項完成</small></div>' +
-      '<div class="work-order-card-foot"><span>預定 ' + escapeHtml(task.scheduledDate) + '</span><strong>進入工單 <span class="material-symbols-rounded">arrow_forward</span></strong></div></button>';
-  }).join('');
+  renderEmployeeDispatchHistory();
 }
 
+function isCompletedDispatchHistory(status) {
+  const stage = normalizeDispatchStage(status);
+  return stage === '請款' || stage === '付款';
+}
+
+function refreshEmployeeHistory() {
+  state.employeeHistoryLimit = 10;
+  loadMine();
+  if (state.user?.role === 'EMPLOYEE') loadWorkOrders();
+}
+
+function renderEmployeeDispatchHistory() {
+  const table = $('#employeeDispatchHistoryTable');
+  if (!table) return;
+  const rows = state.workOrders
+    .filter(task => isCompletedDispatchHistory(task.status))
+    .sort((a, b) => String(b.scheduledDate).localeCompare(String(a.scheduledDate)));
+  const shown = rows.slice(0, state.employeeHistoryLimit);
+  table.innerHTML = shown.length
+    ? shown.map(dispatchHistoryTableRow).join('')
+    : '<tr><td colspan="7" class="empty">目前沒有已完工派工記錄</td></tr>';
+  $('#employeeDispatchHistoryMobile').innerHTML = shown.length
+    ? shown.map(dispatchHistoryCard).join('')
+    : '<div class="empty">目前沒有已完工派工記錄</div>';
+  updateHistoryLoadMore('employee', shown.length, rows.length);
+}
+
+function dispatchHistoryTableRow(task) {
+  const quote = Number(task.totalQuote || 0);
+  const expense = Number(task.reportAmount || 0);
+  return '<tr><td>' + escapeHtml(task.scheduledDate) + '</td><td>' +
+    escapeHtml(task.name) + '</td><td class="history-address">' +
+    escapeHtml(task.address) + '</td><td>' +
+    escapeHtml((task.workItems || []).map(item => item.content).join('、')) +
+    '</td><td class="right">' + money(quote) + '</td><td class="right">' +
+    money(expense) + '</td><td class="right history-total">' +
+    money(quote + expense) + '</td></tr>';
+}
+
+function dispatchHistoryCard(task) {
+  const quote = Number(task.totalQuote || 0);
+  const expense = Number(task.reportAmount || 0);
+  return '<article class="history-card"><div class="history-card-head"><small>' +
+    escapeHtml(task.scheduledDate) + '</small><span class="chip">' +
+    escapeHtml(normalizeDispatchStage(task.status)) + '</span></div><h4>' +
+    escapeHtml(task.name) + '</h4><p><span class="material-symbols-rounded">location_on</span>' +
+    escapeHtml(task.address) + '</p><div class="history-work">' +
+    escapeHtml((task.workItems || []).map(item => item.content).join('、')) +
+    '</div><dl><div><dt>工程報價</dt><dd>' + money(quote) +
+    '</dd></div><div><dt>報帳金額</dt><dd>' + money(expense) +
+    '</dd></div><div class="total"><dt>合計</dt><dd>' +
+    money(quote + expense) + '</dd></div></dl></article>';
+}
+
+function updateHistoryLoadMore(role, shown, total) {
+  const prefix = role === 'employee' ? 'employee' : 'admin';
+  $('#' + prefix + 'HistoryCount').textContent =
+    total ? '已顯示 ' + shown + '／' + total + ' 筆' : '共 0 筆';
+  $('#' + (role === 'employee' ? 'loadMoreEmployeeHistoryBtn' : 'loadMoreAdminHistoryBtn'))
+    .classList.toggle('hidden', shown >= total);
+}
 function openWorkReport(taskId) {
   const task = state.workOrders.find(row => row.id === taskId);
   if (!task) return toast('找不到工單資料，請重新整理。', true);
@@ -257,16 +324,9 @@ async function loadMine() {
 }
 
 function renderMine() {
-  $('#myTotal').textContent = money(state.myRows.reduce((s, r) => s + r.amount, 0));
+  $('#myTotal').textContent = money(state.myRows.reduce((sum, row) => sum + row.amount, 0));
   $('#myCount').textContent = state.myRows.length;
-  const empty = '<tr><td colspan="7" class="empty">尚無報帳紀錄</td></tr>';
-  $('#myExpenseTable').innerHTML = state.myRows.length ? state.myRows.map(r => `<tr>
-    <td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.project)}</td><td>${escapeHtml(r.item)}</td>
-    <td>${escapeHtml(r.category)}</td><td class="right">${money(r.amount)}</td>
-    <td>${receiptLink(r)}</td><td><span class="chip">${escapeHtml(r.status)}</span></td></tr>`).join('') : empty;
-  $('#myExpenseList').innerHTML = state.myRows.length ? state.myRows.map(expenseCard).join('') : '<div class="empty">尚無報帳紀錄</div>';
 }
-
 async function submitExpense(e) {
   e.preventDefault();
   const button = $('#submitExpenseBtn'); button.disabled = true; button.textContent = '送出中…';

@@ -13,12 +13,16 @@
   <div id="employeeWorkOrderList" class="employee-work-orders"><div class="empty">正在載入派工任務…</div></div>
 </section>
 
-<section class="card">
-  <div class="card-title"><h3>歷史報帳</h3><button id="refreshMineBtn" class="icon-btn" title="重新整理"><span class="material-symbols-rounded">refresh</span></button></div>
-  <div id="myExpenseList" class="mobile-list"></div>
-  <div class="table-wrap desktop-table">
-    <table><thead><tr><th>日期</th><th>工程</th><th>品項</th><th>類別</th><th class="right">金額</th><th>收據</th><th>狀態</th></tr></thead><tbody id="myExpenseTable"></tbody></table>
+<section class="card dispatch-history-section">
+  <div class="card-title">
+    <div><h3>歷史派工記錄回查</h3><p>只顯示已完工且指派給我的工單</p></div>
+    <button id="refreshMineBtn" class="icon-btn" title="重新整理"><span class="material-symbols-rounded">refresh</span></button>
   </div>
+  <div id="employeeDispatchHistoryMobile" class="mobile-list"></div>
+  <div class="table-wrap desktop-table">
+    <table class="history-table"><thead><tr><th>日期</th><th>工程</th><th>地點</th><th>工作內容</th><th class="right">工程報價</th><th class="right">報帳金額</th><th class="right">合計</th></tr></thead><tbody id="employeeDispatchHistoryTable"></tbody></table>
+  </div>
+  <div class="history-load-row"><small id="employeeHistoryCount"></small><button id="loadMoreEmployeeHistoryBtn" type="button" class="btn outlined small hidden">再顯示 10 筆</button></div>
 </section>
 
 <dialog id="workReportDialog" class="work-report-dialog">

@@ -14,6 +14,14 @@
   <div class="card-title"><h3>派工任務</h3><button id="refreshDispatchBtn" class="icon-btn" title="重新整理"><span class="material-symbols-rounded">refresh</span></button></div>
   <div id="dispatchTaskList" class="dispatch-list"><div class="empty">尚無派工任務</div></div>
 </section>
+<section class="card dispatch-history-section">
+  <div class="card-title"><div><h3>派工完工歷史回查</h3><p>請款與付款階段的已完工工單</p></div></div>
+  <div id="adminDispatchHistoryMobile" class="mobile-list"></div>
+  <div class="table-wrap desktop-table">
+    <table class="history-table"><thead><tr><th>日期</th><th>工程</th><th>地點</th><th>工作內容</th><th class="right">工程報價</th><th class="right">報帳金額</th><th class="right">合計</th></tr></thead><tbody id="adminDispatchHistoryTable"></tbody></table>
+  </div>
+  <div class="history-load-row"><small id="adminHistoryCount"></small><button id="loadMoreAdminHistoryBtn" type="button" class="btn outlined small hidden">再顯示 10 筆</button></div>
+</section>
 
 <dialog id="dispatchDialog" class="dispatch-dialog">
   <form id="dispatchForm" method="dialog">

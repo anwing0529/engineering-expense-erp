@@ -99,4 +99,24 @@ dialog{border:0;border-radius:20px;padding:0;width:min(92vw,680px);box-shadow:0 
 .workflow-progress.compact .workflow-step>span{width:25px;height:25px;font-size:11px}
 .workflow-progress.compact .workflow-step:not(:last-child)::after{top:11px;left:calc(50% + 13px);right:calc(-50% + 13px)}
 .workflow-progress.compact small{font-size:10px}
-@media(max-width:480px){.workflow-step small{font-size:10px}.workflow-step>span{width:26px;height:26px}.workflow-step:not(:last-child)::after{top:12px;left:calc(50% + 14px);right:calc(-50% + 14px)}}</style>
+@media(max-width:480px){.workflow-step small{font-size:10px}.workflow-step>span{width:26px;height:26px}.workflow-step:not(:last-child)::after{top:12px;left:calc(50% + 14px);right:calc(-50% + 14px)}}
+.dispatch-history-section .card-title p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.history-table{min-width:1050px;white-space:normal}
+.history-table th:nth-child(3),.history-table td:nth-child(3){min-width:210px}
+.history-table th:nth-child(4),.history-table td:nth-child(4){min-width:230px}
+.history-address{color:#315b8a}
+.history-total{color:var(--primary);font-weight:700}
+.history-load-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px;color:var(--muted)}
+.history-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:linear-gradient(180deg,#fff,#f8fbff)}
+.history-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.history-card-head small{color:var(--muted)}
+.history-card h4{margin:9px 0 6px;font-size:17px}
+.history-card>p{display:flex;align-items:flex-start;gap:5px;margin:0;color:#315b8a;font-size:13px}
+.history-card>p .material-symbols-rounded{font-size:18px}
+.history-work{margin:12px 0;padding:10px;border-radius:10px;background:#f4f7fb;font-size:13px;line-height:1.6}
+.history-card dl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0}
+.history-card dl>div{padding:9px;border-radius:9px;background:#f7f9fc;text-align:center}
+.history-card dt{color:var(--muted);font-size:11px}
+.history-card dd{margin:3px 0 0;font-weight:700;font-size:13px}
+.history-card dl .total{background:#e8f0fe}.history-card dl .total dd{color:var(--primary)}
+@media(max-width:420px){.history-card dl{grid-template-columns:1fr}.history-card dl>div{display:flex;justify-content:space-between;align-items:center}.history-card dd{margin:0}}</style>

@@ -5,7 +5,14 @@ function bindDispatchEvents() {
   $$('.close-dispatch-dialog').forEach(btn =>
     btn.addEventListener('click', () => $('#dispatchDialog').close()));
   $('#dispatchForm').addEventListener('submit', submitDispatch);
-  $('#refreshDispatchBtn').addEventListener('click', loadDispatch);
+$('#refreshDispatchBtn').addEventListener('click', () => {
+    state.adminHistoryLimit = 10;
+    loadDispatch();
+  });
+  $('#loadMoreAdminHistoryBtn').addEventListener('click', () => {
+    state.adminHistoryLimit += 10;
+    renderAdminDispatchHistory();
+  });
   $('#dispatchStatus').addEventListener('change', () =>
     renderWorkflowProgress('#dispatchProgressBar', $('#dispatchStatus').value));
   $('#dispatchTaskList').addEventListener('click', event => {
@@ -36,11 +43,28 @@ function renderDispatch() {
     ['已接單', '施工中', '待驗收'].includes(task.status)).length;
   $('#dispatchQuoteTotal').textContent =
     money(tasks.reduce((sum, task) => sum + task.totalQuote, 0));
-  $('#dispatchTaskList').innerHTML = tasks.length
-    ? tasks.map(dispatchTaskCard).join('')
-    : '<div class="empty">尚無派工任務</div>';
+  const activeTasks = tasks.filter(task => !isCompletedDispatchHistory(task.status));
+  $('#dispatchTaskList').innerHTML = activeTasks.length
+    ? activeTasks.map(dispatchTaskCard).join('')
+    : '<div class="empty">目前沒有進行中的派工任務；已完工工單可在下方回查。</div>';
+  renderAdminDispatchHistory();
 }
 
+function renderAdminDispatchHistory() {
+  const table = $('#adminDispatchHistoryTable');
+  if (!table) return;
+  const rows = (state.dispatchData?.tasks || [])
+    .filter(task => isCompletedDispatchHistory(task.status))
+    .sort((a, b) => String(b.scheduledDate).localeCompare(String(a.scheduledDate)));
+  const shown = rows.slice(0, state.adminHistoryLimit);
+  table.innerHTML = shown.length
+    ? shown.map(dispatchHistoryTableRow).join('')
+    : '<tr><td colspan="7" class="empty">目前沒有已完工派工記錄</td></tr>';
+  $('#adminDispatchHistoryMobile').innerHTML = shown.length
+    ? shown.map(dispatchHistoryCard).join('')
+    : '<div class="empty">目前沒有已完工派工記錄</div>';
+  updateHistoryLoadMore('admin', shown.length, rows.length);
+}
 function dispatchTaskCard(task) {
   const items = task.workItems.map(item =>
     '<li>' + escapeHtml(item.content) + '</li>').join('');
