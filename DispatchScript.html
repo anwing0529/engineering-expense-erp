@@ -130,8 +130,8 @@ function renderDispatchReviewDetail() {
         ? report.expenses.map(item => '<li><span>' + escapeHtml(item.category || '費用') + '</span><strong>' + money(item.amount) + '</strong></li>').join('')
         : '<li><span>本次無報帳費用</span><strong>NT$ 0</strong></li>';
       const attachments = report.attachments.length
-        ? report.attachments.map(file => file.type === '完工照片'
-          ? '<a class="review-photo" href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=' + encodeURIComponent(file.fileId) + '&sz=w400" alt="' + escapeHtml(file.name) + '"><small>' + escapeHtml(file.name) + '</small></a>'
+        ? report.attachments.map(file => file.isImage
+          ? '<a class="review-photo" href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener"><img data-preview-task="' + escapeHtml(detail.task.id) + '" data-preview-file="' + escapeHtml(file.fileId) + '" alt="正在載入 ' + escapeHtml(file.name) + '"><small>' + escapeHtml(file.name) + '</small></a>'
           : '<a class="review-receipt" href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">receipt_long</span>' + escapeHtml(file.name) + '</a>').join('')
         : '<div class="empty compact">沒有附件</div>';
       return '<section class="review-report"><div class="review-report-head"><strong>' + escapeHtml(report.createdAt) + '</strong><span>' + money(report.amount) + '</span></div>' +
@@ -147,13 +147,29 @@ function renderDispatchReviewDetail() {
       '<label>待付款金額<input class="review-amount" type="number" min="0" max="100000000" value="' + Number(workflow.amount ?? group.totalAmount) + '" ' + (paid ? 'readonly' : '') + '></label>' +
       '<label>老闆審核備註<textarea class="review-admin-note" rows="4" maxlength="1000" ' + (paid ? 'readonly' : '') + '>' + escapeHtml(workflow.adminNote || '') + '</textarea></label>' +
       (workflow.employeeNote ? '<p class="review-party-note"><b>員工請款備註：</b>' + escapeHtml(workflow.employeeNote) + '</p>' : '') +
-      '<label>老闆付款備註<textarea class="review-payment-note" rows="3" maxlength="1000" ' + (paid ? 'readonly' : '') + '>' + escapeHtml(workflow.paymentNote || '') + '</textarea></label>' +
+      
       '<div class="review-actions">' +
         (!paid ? '<button type="button" class="btn outlined small save-review-note">儲存審核備註</button>' : '') +
         (workflow.status === '待審核' ? '<button type="button" class="btn primary small approve-review">審核通過</button>' : '') +
         (workflow.status === '待付款' ? '<button type="button" class="btn primary small confirm-payment">確認已付款</button>' : '') +
       '</div></div></article>';
   }).join('');
+  loadDispatchAttachmentPreviews();
+}
+
+async function loadDispatchAttachmentPreviews() {
+  const images = $$('#dispatchReviewContent img[data-preview-file]');
+  await Promise.allSettled(images.map(async image => {
+    try {
+      const result = await gas('getDispatchAttachmentPreview', image.dataset.previewTask, image.dataset.previewFile, state.token);
+      image.src = result.dataUrl;
+      image.alt = '完工照片';
+      image.classList.add('loaded');
+    } catch (error) {
+      image.alt = '照片預覽失敗，請點擊開啟原始檔案';
+      image.classList.add('preview-error');
+    }
+  }));
 }
 
 async function handleDispatchReviewAction(event) {
@@ -164,9 +180,7 @@ async function handleDispatchReviewAction(event) {
     taskId: state.dispatchReviewDetail.task.id,
     employeeEmail: card.dataset.reviewEmail,
     amount: $('.review-amount', card).value,
-    note: button.classList.contains('confirm-payment')
-      ? $('.review-payment-note', card).value
-      : $('.review-admin-note', card).value
+    note: $('.review-admin-note', card).value
   };
   button.disabled = true;
   try {
