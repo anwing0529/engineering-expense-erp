@@ -1,5 +1,5 @@
 <div class="page-head">
-  <div><p class="eyebrow">DISPATCH</p><h2>老闆派工</h2><p>建立工程地址、工作內容與指派員工</p></div>
+  <div><p class="eyebrow">ADMIN</p><h2><span id="dispatchPageUserName"></span>｜老闆派工</h2><p>派工、審核、薪資結算與工程管理</p></div>
   <button id="openDispatchBtn" class="btn primary"><span class="material-symbols-rounded">add_task</span>新增派工</button>
 </div>
 
@@ -41,6 +41,16 @@
         </label>
       </div>
 
+      <section id="dispatchReadOnlyWorkSection" class="wide form-section hidden">
+        <div class="section-title"><strong>工作任務內容</strong><small>僅供查看，不可修改</small></div>
+        <ol id="dispatchReadOnlyWorkItems" class="readonly-work-items"></ol>
+      </section>
+
+      <section id="dispatchProgressSection" class="wide form-section hidden">
+        <div class="section-title"><strong>工程進度</strong><small>選擇目前階段</small></div>
+        <div id="dispatchProgressBar" class="workflow-progress"></div>
+        <label>目前進度<select id="dispatchStatus" name="status"></select></label>
+      </section>
       <div id="dispatchEmployeeSection" class="wide form-section">
         <div class="section-title"><strong>指派員工<span>*</span></strong><small>可複選</small></div>
         <div id="dispatchEmployeeOptions" class="employee-options"></div>

@@ -1,10 +1,13 @@
 <script>
+const DISPATCH_WORKFLOW = ['派工', '施工', '驗收', '請款', '付款'];
 function bindDispatchEvents() {
   $('#openDispatchBtn').addEventListener('click', openDispatchDialog);
   $$('.close-dispatch-dialog').forEach(btn =>
     btn.addEventListener('click', () => $('#dispatchDialog').close()));
   $('#dispatchForm').addEventListener('submit', submitDispatch);
   $('#refreshDispatchBtn').addEventListener('click', loadDispatch);
+  $('#dispatchStatus').addEventListener('change', () =>
+    renderWorkflowProgress('#dispatchProgressBar', $('#dispatchStatus').value));
   $('#dispatchTaskList').addEventListener('click', event => {
     const button = event.target.closest('.edit-dispatch-task');
     if (button) openDispatchEditDialog(button.dataset.taskId);
@@ -54,6 +57,7 @@ function dispatchTaskCard(task) {
     escapeHtml(task.address) + '</a>' +
     '<div class="dispatch-meta"><span>預定 ' + escapeHtml(task.scheduledDate) +
     '</span><span>工程報價 ' + money(task.totalQuote) + '</span></div>' +
+    workflowProgressHtml(task.status) +
     '<ol class="dispatch-items">' + items + '</ol>' +
     '<div class="assignee-row">' + employees + '</div>' +
     (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
@@ -74,6 +78,8 @@ async function openDispatchDialog() {
   $('#dispatchWorkSection').classList.remove('hidden');
   $('#dispatchEmployeeSection').classList.remove('hidden');
   $('#dispatchEditNotice').classList.add('hidden');
+  $('#dispatchReadOnlyWorkSection').classList.add('hidden');
+  $('#dispatchProgressSection').classList.add('hidden');
   $('#dispatchDate').value = new Date().toLocaleDateString('en-CA');
   renderDispatchAddresses();
   renderDispatchWorkTypes();
@@ -95,6 +101,12 @@ function openDispatchEditDialog(taskId) {
   $('#dispatchWorkSection').classList.add('hidden');
   $('#dispatchEmployeeSection').classList.add('hidden');
   $('#dispatchEditNotice').classList.remove('hidden');
+  $('#dispatchReadOnlyWorkSection').classList.remove('hidden');
+  $('#dispatchProgressSection').classList.remove('hidden');
+  $('#dispatchReadOnlyWorkItems').innerHTML = task.workItems.map(item =>
+    '<li><span class="material-symbols-rounded">task_alt</span><span>' +
+    escapeHtml(item.content) + '</span></li>').join('');
+  renderDispatchStatusOptions(task.status);
   $('#dispatchProjectName').value = task.name;
   $('#dispatchDate').value = String(task.scheduledDate || '').replaceAll('/', '-');
   form.elements.customerName.value = task.customerName || '';
@@ -114,7 +126,7 @@ function openDispatchEditDialog(taskId) {
 }
 
 function isDispatchLockedStatusClient(status) {
-  return ['已完成', '已結案', '完工結案'].includes(String(status || '').trim());
+  return ['已結案', '完工結案', '付款'].includes(String(status || '').trim());
 }
 
 function renderDispatchAddresses() {
@@ -242,4 +254,35 @@ async function submitDispatch(e) {
     button.textContent = '建立派工';
   }
 }
-</script>
+
+function normalizeDispatchStage(status) {
+  const value = String(status || '').trim();
+  if (['待接單', '已接單', '派工'].includes(value)) return '派工';
+  if (['施工中', '進行中', '施工'].includes(value)) return '施工';
+  if (['待驗收', '驗收'].includes(value)) return '驗收';
+  if (['已完成', '請款'].includes(value)) return '請款';
+  if (['已結案', '完工結案', '付款'].includes(value)) return '付款';
+  return '派工';
+}
+
+function workflowProgressHtml(status) {
+  const current = normalizeDispatchStage(status);
+  const currentIndex = DISPATCH_WORKFLOW.indexOf(current);
+  return '<div class="workflow-progress compact">' + DISPATCH_WORKFLOW.map((stage, index) =>
+    '<div class="workflow-step ' + (index < currentIndex ? 'done' : index === currentIndex ? 'active' : '') + '">' +
+    '<span>' + (index < currentIndex ? '✓' : index + 1) + '</span><small>' + stage + '</small></div>'
+  ).join('') + '</div>';
+}
+
+function renderWorkflowProgress(selector, status) {
+  $(selector).outerHTML = workflowProgressHtml(status).replace(
+    'class="workflow-progress compact"', 'id="dispatchProgressBar" class="workflow-progress"');
+}
+
+function renderDispatchStatusOptions(status) {
+  const current = normalizeDispatchStage(status);
+  $('#dispatchStatus').innerHTML = DISPATCH_WORKFLOW.map(stage =>
+    '<option value="' + stage + '"' + (stage === current ? ' selected' : '') + '>' +
+    stage + '</option>').join('');
+  renderWorkflowProgress('#dispatchProgressBar', current);
+}</script>

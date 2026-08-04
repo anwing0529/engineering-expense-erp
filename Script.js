@@ -76,7 +76,11 @@ async function handleLogin(e) {
 function enterApp() {
   $('#loginView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
-  $('#userName').textContent = state.user.name;
+$('#userName').textContent = state.user.name;
+  ['#employeePageUserName', '#dispatchPageUserName', '#adminPageUserName'].forEach(selector => {
+    const target = $(selector);
+    if (target) target.textContent = state.user.name;
+  });
   state.user.role = String(state.user.role || 'EMPLOYEE').toUpperCase();
   const isAdmin = state.user.role === 'ADMIN';
   $('#dispatchNav').classList.toggle('hidden', !isAdmin);
@@ -131,6 +135,7 @@ function renderWorkOrders() {
     return '<button type="button" class="employee-work-order-card" data-task-id="' + escapeHtml(task.id) + '">' +
       '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(task.status) + '</span></div>' +
       '<p class="work-order-address"><span class="material-symbols-rounded">location_on</span>' + escapeHtml(task.address) + '</p>' +
+      workflowProgressHtml(task.status) +
       '<div class="work-order-progress"><div><span style="width:' + (total ? done / total * 100 : 0) + '%"></span></div><small>' + done + ' / ' + total + ' 項完成</small></div>' +
       '<div class="work-order-card-foot"><span>預定 ' + escapeHtml(task.scheduledDate) + '</span><strong>進入工單 <span class="material-symbols-rounded">arrow_forward</span></strong></div></button>';
   }).join('');

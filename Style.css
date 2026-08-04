@@ -84,4 +84,19 @@ dialog{border:0;border-radius:20px;padding:0;width:min(92vw,680px);box-shadow:0 
 .photo-preview-grid .file-icon{width:100%;aspect-ratio:1;display:grid;place-items:center;border-radius:10px;background:#fff0f0;color:var(--danger);font-size:42px}
 .remove-preview{position:absolute;top:5px;right:5px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(198,40,40,.92);color:#fff;font-size:20px;line-height:1;cursor:pointer}
 .photo-preview-placeholder.optional{color:var(--muted)}
-@media(max-width:640px){.expense-category-options{grid-template-columns:repeat(2,minmax(0,1fr))}}</style>
+@media(max-width:640px){.expense-category-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.readonly-work-items{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.readonly-work-items li{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#f4f7fb;color:var(--text)}
+.readonly-work-items .material-symbols-rounded{color:var(--primary);font-size:20px}
+.workflow-progress{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:4px 0 16px}
+.workflow-step{position:relative;display:grid;justify-items:center;gap:6px;color:#98a2b3;font-size:12px;text-align:center}
+.workflow-step:not(:last-child)::after{content:"";position:absolute;top:14px;left:calc(50% + 16px);right:calc(-50% + 16px);height:3px;background:#e2e8f0;z-index:0}
+.workflow-step>span{position:relative;z-index:1;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:#e9eef5;color:#7d8998;font-weight:700}
+.workflow-step.done>span,.workflow-step.active>span{background:var(--primary);color:#fff}
+.workflow-step.done:not(:last-child)::after{background:var(--primary)}
+.workflow-step.active small{color:var(--primary);font-weight:700}
+.workflow-progress.compact{margin:14px 0}
+.workflow-progress.compact .workflow-step>span{width:25px;height:25px;font-size:11px}
+.workflow-progress.compact .workflow-step:not(:last-child)::after{top:11px;left:calc(50% + 13px);right:calc(-50% + 13px)}
+.workflow-progress.compact small{font-size:10px}
+@media(max-width:480px){.workflow-step small{font-size:10px}.workflow-step>span{width:26px;height:26px}.workflow-step:not(:last-child)::after{top:12px;left:calc(50% + 14px);right:calc(-50% + 14px)}}</style>
