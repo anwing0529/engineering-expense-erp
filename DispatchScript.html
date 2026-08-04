@@ -275,7 +275,7 @@ async function submitDispatch(e) {
     toast(errorText(err), true);
   } finally {
     button.disabled = false;
-    button.textContent = '建立派工';
+    button.textContent = state.editingDispatchTaskId ? '儲存修改' : '建立派工';
   }
 }
 

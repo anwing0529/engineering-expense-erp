@@ -37,7 +37,7 @@ function bindEvents() {
     window.top.location.href = 'https://anwing0529.github.io/engineering-expense-erp/';
   });
   $$('.nav-item').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
-  $('#openExpenseBtn').addEventListener('click', () => $('#expenseDialog').showModal());
+  $('#openExpenseBtn')?.addEventListener('click', () => $('#expenseDialog').showModal());
   $$('.close-dialog').forEach(btn => btn.addEventListener('click', () => $('#expenseDialog').close()));
   $('#expenseForm').addEventListener('submit', submitExpense);
   $('#expenseProject').addEventListener('change', toggleCustomProject);
@@ -105,7 +105,7 @@ function switchView(view) {
   if (view === 'admin') loadAdmin();
   if (view === 'dispatch') loadDispatch();
   if (view === 'employee') {
-    loadMine();
+
     if (state.user.role === 'EMPLOYEE') loadWorkOrders();
     else renderAdminWorkOrderNotice();
   }
@@ -145,6 +145,10 @@ function renderWorkOrders() {
     }).join('');
   }
   renderEmployeeDispatchHistory();
+  const reports = state.workOrders.flatMap(task => task.reports || []);
+  $('#myTotal').textContent = money(reports.reduce((sum, report) =>
+    sum + Number(report.materialAmount || 0), 0));
+  $('#myCount').textContent = reports.length;
 }
 
 function isCompletedDispatchHistory(status) {
@@ -154,7 +158,6 @@ function isCompletedDispatchHistory(status) {
 
 function refreshEmployeeHistory() {
   state.employeeHistoryLimit = 10;
-  loadMine();
   if (state.user?.role === 'EMPLOYEE') loadWorkOrders();
 }
 
@@ -237,11 +240,13 @@ async function submitWorkReport(e) {
   button.disabled = true; button.textContent = '送出中…';
   try {
     if (!state.workReportPhotos.length) throw new Error('請至少上傳 1 張完工照片。');
-    const selectedCategory = $('input[name="workReportCategory"]:checked');
+    const selectedCategories = $$('input[name="workReportCategory"]:checked')
+      .map(input => input.value);
+    if (!selectedCategories.length) throw new Error('請至少勾選一個費用類別。');
     const payload = {
       taskId: $('#workReportTaskId').value,
       completedItemIds: $$('#workReportItems input:checked:not(:disabled)').map(input => input.value),
-      category: selectedCategory ? selectedCategory.value : '',
+      categories: selectedCategories,
       otherCategory: $('#workReportOtherCategory').value.trim(),
       amount: $('#workReportMaterialAmount').value,
       note: $('#workReportNote').value.trim(),
@@ -251,14 +256,14 @@ async function submitWorkReport(e) {
     const result = await gas('submitDispatchWorkReport', payload, state.token);
     toast(result.message);
     $('#workReportDialog').close();
-    await Promise.all([loadWorkOrders(), loadMine()]);
+    await loadWorkOrders();
   } catch (err) { toast(errorText(err), true); }
   finally { button.disabled = false; button.textContent = '送出工單回報'; }
 }
 
 function toggleWorkReportOtherCategory() {
-  const selected = $('input[name="workReportCategory"]:checked');
-  const isOther = selected && selected.value === '__OTHER_EXPENSE__';
+  const selected = $$('input[name="workReportCategory"]:checked').map(input => input.value);
+  const isOther = selected.includes('__OTHER_EXPENSE__');
   $('#workReportOtherCategoryField').classList.toggle('hidden', !isOther);
   $('#workReportOtherCategory').required = Boolean(isOther);
   if (!isOther) $('#workReportOtherCategory').value = '';

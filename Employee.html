@@ -1,11 +1,11 @@
 <div class="page-head">
   <div><p class="eyebrow">EMPLOYEE</p><h2><span id="employeePageUserName"></span>｜我的工單與報帳</h2><p>報工、拍照、上傳材料與送出請款資料</p></div>
-  <button id="openExpenseBtn" class="btn primary"><span class="material-symbols-rounded">add</span>新增報帳</button>
+
 </div>
 
 <div class="stat-grid employee-stats">
-  <article class="stat-card"><span class="material-symbols-rounded blue">payments</span><div><small>我的累計金額</small><strong id="myTotal">NT$ 0</strong></div></article>
-  <article class="stat-card"><span class="material-symbols-rounded green">description</span><div><small>報帳筆數</small><strong id="myCount">0</strong></div></article>
+  <article class="stat-card"><span class="material-symbols-rounded blue">payments</span><div><small>工單回報金額</small><strong id="myTotal">NT$ 0</strong></div></article>
+  <article class="stat-card"><span class="material-symbols-rounded green">description</span><div><small>工單回報筆數</small><strong id="myCount">0</strong></div></article>
 </div>
 
 <section class="card work-order-section">
@@ -36,13 +36,13 @@
         <div id="workReportItems" class="report-work-items"></div>
       </section>
       <section class="form-section wide">
-        <div class="section-title"><strong>報帳費用類別<span>*</span></strong><small>本次回報選擇一種</small></div>
+        <div class="section-title"><strong>報帳費用類別<span>*</span></strong><small>可複選</small></div>
         <div class="expense-category-options">
-          <label><input type="radio" name="workReportCategory" value="工具設備" required><span>工具設備</span></label>
-          <label><input type="radio" name="workReportCategory" value="材料費"><span>材料費</span></label>
-          <label><input type="radio" name="workReportCategory" value="外包工資"><span>外包工資</span></label>
-          <label><input type="radio" name="workReportCategory" value="雜支"><span>雜支</span></label>
-          <label><input type="radio" name="workReportCategory" value="__OTHER_EXPENSE__"><span>其它</span></label>
+          <label><input type="checkbox" name="workReportCategory" value="工具設備"><span>工具設備</span></label>
+          <label><input type="checkbox" name="workReportCategory" value="材料費"><span>材料費</span></label>
+          <label><input type="checkbox" name="workReportCategory" value="外包工資"><span>外包工資</span></label>
+          <label><input type="checkbox" name="workReportCategory" value="雜支"><span>雜支</span></label>
+          <label><input type="checkbox" name="workReportCategory" value="__OTHER_EXPENSE__"><span>其它</span></label>
         </div>
         <label id="workReportOtherCategoryField" class="hidden">其它費用名稱<span>*</span><input id="workReportOtherCategory" maxlength="50" placeholder="請自行輸入"></label>
       </section>
