@@ -23,6 +23,13 @@
   <div class="history-load-row"><small id="adminHistoryCount"></small><button id="loadMoreAdminHistoryBtn" type="button" class="btn outlined small hidden">再顯示 10 筆</button></div>
 </section>
 
+<dialog id="dispatchReviewDialog" class="dispatch-review-dialog">
+  <form method="dialog">
+    <div class="dialog-head"><div><small id="dispatchReviewTaskCode"></small><h3 id="dispatchReviewTitle">完工回報審核</h3></div><button type="button" class="icon-btn close-dispatch-review"><span class="material-symbols-rounded">close</span></button></div>
+    <div id="dispatchReviewContent" class="review-content"><div class="empty">正在載入回報內容…</div></div>
+    <div class="dialog-actions"><button type="button" class="btn text close-dispatch-review">關閉</button></div>
+  </form>
+</dialog>
 <dialog id="dispatchDialog" class="dispatch-dialog">
   <form id="dispatchForm" method="dialog">
     <div class="dialog-head">

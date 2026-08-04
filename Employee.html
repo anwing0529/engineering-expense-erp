@@ -56,6 +56,16 @@
     <div class="dialog-actions"><button type="button" class="btn text close-work-report">取消</button><button id="submitWorkReportBtn" type="submit" class="btn primary">送出工單回報</button></div>
   </form>
 </dialog>
+<dialog id="employeePaymentDialog" class="payment-dialog">
+  <form id="employeePaymentForm" method="dialog">
+    <input id="employeePaymentTaskId" type="hidden">
+    <div class="dialog-head"><div><small id="employeePaymentTaskCode"></small><h3 id="employeePaymentTitle">請款與備註</h3></div><button type="button" class="icon-btn close-employee-payment"><span class="material-symbols-rounded">close</span></button></div>
+    <div class="payment-summary"><small>待付款金額</small><strong id="employeePendingAmount">NT$ 0</strong><span id="employeePaymentStatus" class="chip"></span></div>
+    <label class="wide">老闆審核內容<textarea id="employeeAdminReviewNote" rows="3" readonly></textarea></label>
+    <label class="wide">員工請款備註<textarea id="employeePaymentNote" rows="5" maxlength="1000" placeholder="可隨時修改，例如：匯款帳號末五碼、材料費說明"></textarea></label>
+    <div class="dialog-actions"><button type="button" class="btn text close-employee-payment">取消</button><button id="saveEmployeePaymentNoteBtn" type="button" class="btn outlined">儲存備註</button><button id="requestEmployeePaymentBtn" type="submit" class="btn primary hidden">送出請款</button></div>
+  </form>
+</dialog>
 <dialog id="expenseDialog">
   <form id="expenseForm" method="dialog">
     <div class="dialog-head"><h3>新增報帳</h3><button type="button" class="icon-btn close-dialog"><span class="material-symbols-rounded">close</span></button></div>

@@ -50,8 +50,15 @@ $('#refreshMineBtn').addEventListener('click', refreshEmployeeHistory);
   $('#refreshWorkOrdersBtn').addEventListener('click', loadWorkOrders);
   $('#employeeWorkOrderList').addEventListener('click', e => {
     const card = e.target.closest('[data-task-id]');
-    if (card) openWorkReport(card.dataset.taskId);
+    if (!card) return;
+    const task = state.workOrders.find(item => item.id === card.dataset.taskId);
+    if (task?.workflow) openEmployeePaymentDialog(task.id);
+    else openWorkReport(card.dataset.taskId);
   });
+  $$('.close-employee-payment').forEach(button =>
+    button.addEventListener('click', () => $('#employeePaymentDialog').close()));
+  $('#employeePaymentForm').addEventListener('submit', requestEmployeePayment);
+  $('#saveEmployeePaymentNoteBtn').addEventListener('click', saveEmployeePaymentNote);
   $$('.close-work-report').forEach(btn => btn.addEventListener('click', () => $('#workReportDialog').close()));
   $('#workReportForm').addEventListener('submit', submitWorkReport);
   $('#completionPhotoInput').addEventListener('change', e => addWorkReportFiles(e, 'photos'));
@@ -128,20 +135,32 @@ function renderAdminWorkOrderNotice() {
 
 function renderWorkOrders() {
   const box = $('#employeeWorkOrderList');
-  const activeTasks = state.workOrders.filter(task => !isCompletedDispatchHistory(task.status));
+  const activeTasks = state.workOrders.filter(task => !isCompletedDispatchHistory(task));
   if (!activeTasks.length) {
-    box.innerHTML = '<div class="empty">目前沒有進行中的派工；已完工工單可在下方歷史回查。</div>';
+    box.innerHTML = '<div class="empty">目前沒有進行中的派工；已付款工單可在下方歷史回查。</div>';
   } else {
     box.innerHTML = activeTasks.map(task => {
       const completed = new Set((task.reports || []).flatMap(report => report.completedItemIds || []));
       const total = task.workItems.length;
       const done = task.workItems.filter(item => completed.has(item.id)).length;
+      const workflow = task.workflow;
+      const actionText = !workflow ? '進入工單'
+        : workflow.status === '可請款' ? '請款'
+        : workflow.status === '待付款' ? '查看待付款'
+        : workflow.status === '已付款' ? '查看付款'
+        : '查看審核';
+      const workflowInfo = workflow
+        ? '<div class="employee-payment-strip"><div><small>' + escapeHtml(workflow.status) +
+          '</small><strong>待付款金額 ' + money(workflow.amount) + '</strong></div>' +
+          '<span>' + escapeHtml(workflow.adminNote || '尚無老闆審核備註') + '</span></div>'
+        : '';
       return '<button type="button" class="employee-work-order-card" data-task-id="' + escapeHtml(task.id) + '">' +
-        '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(task.status) + '</span></div>' +
+        '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(workflow?.status || task.status) + '</span></div>' +
         '<p class="work-order-address"><span class="material-symbols-rounded">location_on</span>' + escapeHtml(task.address) + '</p>' +
-        workflowProgressHtml(task.status) +
+        workflowProgressHtml(workflow?.status === '已付款' ? '付款' : task.status) +
         '<div class="work-order-progress"><div><span style="width:' + (total ? done / total * 100 : 0) + '%"></span></div><small>' + done + ' / ' + total + ' 項完成</small></div>' +
-        '<div class="work-order-card-foot"><span>預定 ' + escapeHtml(task.scheduledDate) + '</span><strong>進入工單 <span class="material-symbols-rounded">arrow_forward</span></strong></div></button>';
+        workflowInfo +
+        '<div class="work-order-card-foot"><span>預定 ' + escapeHtml(task.scheduledDate) + '</span><strong>' + actionText + ' <span class="material-symbols-rounded">arrow_forward</span></strong></div></button>';
     }).join('');
   }
   renderEmployeeDispatchHistory();
@@ -151,9 +170,59 @@ function renderWorkOrders() {
   $('#myCount').textContent = reports.length;
 }
 
-function isCompletedDispatchHistory(status) {
-  const stage = normalizeDispatchStage(status);
-  return stage === '請款' || stage === '付款';
+function openEmployeePaymentDialog(taskId) {
+  const task = state.workOrders.find(item => item.id === taskId);
+  if (!task?.workflow) return toast('此工單尚未建立審核資料。', true);
+  const workflow = task.workflow;
+  $('#employeePaymentTaskId').value = task.id;
+  $('#employeePaymentTaskCode').textContent = task.id;
+  $('#employeePaymentTitle').textContent = task.name + '｜請款';
+  $('#employeePendingAmount').textContent = money(workflow.amount);
+  $('#employeePaymentStatus').textContent = workflow.status;
+  $('#employeeAdminReviewNote').value = workflow.adminNote || '等待老闆填寫審核內容';
+  $('#employeePaymentNote').value = workflow.employeeNote || '';
+  $('#requestEmployeePaymentBtn').classList.toggle('hidden', workflow.status !== '可請款');
+  $('#saveEmployeePaymentNoteBtn').classList.toggle('hidden', workflow.status === '已付款');
+  $('#employeePaymentNote').readOnly = workflow.status === '已付款';
+  $('#employeePaymentDialog').showModal();
+}
+
+async function saveEmployeePaymentNote() {
+  const button = $('#saveEmployeePaymentNoteBtn');
+  button.disabled = true;
+  try {
+    const result = await gas('saveMyPaymentNote', {
+      taskId: $('#employeePaymentTaskId').value,
+      note: $('#employeePaymentNote').value
+    }, state.token);
+    toast(result.message);
+    await loadWorkOrders();
+  } catch (error) { toast(errorText(error), true); }
+  finally { button.disabled = false; }
+}
+
+async function requestEmployeePayment(event) {
+  event.preventDefault();
+  const button = $('#requestEmployeePaymentBtn');
+  if (button.classList.contains('hidden')) return;
+  button.disabled = true; button.textContent = '送出中…';
+  try {
+    const result = await gas('requestMyDispatchPayment', {
+      taskId: $('#employeePaymentTaskId').value,
+      note: $('#employeePaymentNote').value
+    }, state.token);
+    toast(result.message);
+    $('#employeePaymentDialog').close();
+    await loadWorkOrders();
+  } catch (error) { toast(errorText(error), true); }
+  finally { button.disabled = false; button.textContent = '送出請款'; }
+}
+function isCompletedDispatchHistory(taskOrStatus) {
+  if (taskOrStatus && typeof taskOrStatus === 'object') {
+    if (taskOrStatus.workflow) return taskOrStatus.workflow.status === '已付款';
+    return ['請款', '付款'].includes(normalizeDispatchStage(taskOrStatus.status));
+  }
+  return ['請款', '付款'].includes(normalizeDispatchStage(taskOrStatus));
 }
 
 function refreshEmployeeHistory() {
@@ -165,7 +234,7 @@ function renderEmployeeDispatchHistory() {
   const table = $('#employeeDispatchHistoryTable');
   if (!table) return;
   const rows = state.workOrders
-    .filter(task => isCompletedDispatchHistory(task.status))
+    .filter(task => isCompletedDispatchHistory(task))
     .sort((a, b) => String(b.scheduledDate).localeCompare(String(a.scheduledDate)));
   const shown = rows.slice(0, state.employeeHistoryLimit);
   table.innerHTML = shown.length

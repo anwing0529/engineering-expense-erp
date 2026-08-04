@@ -16,9 +16,14 @@ $('#refreshDispatchBtn').addEventListener('click', () => {
   $('#dispatchStatus').addEventListener('change', () =>
     renderWorkflowProgress('#dispatchProgressBar', $('#dispatchStatus').value));
   $('#dispatchTaskList').addEventListener('click', event => {
-    const button = event.target.closest('.edit-dispatch-task');
-    if (button) openDispatchEditDialog(button.dataset.taskId);
+    const reviewButton = event.target.closest('.review-dispatch-task');
+    if (reviewButton) return openDispatchReviewDialog(reviewButton.dataset.taskId);
+    const editButton = event.target.closest('.edit-dispatch-task');
+    if (editButton) openDispatchEditDialog(editButton.dataset.taskId);
   });
+  $$('.close-dispatch-review').forEach(button =>
+    button.addEventListener('click', () => $('#dispatchReviewDialog').close()));
+  $('#dispatchReviewContent').addEventListener('click', handleDispatchReviewAction);
 }
 
 async function loadDispatch() {
@@ -43,7 +48,7 @@ function renderDispatch() {
     ['已接單', '施工中', '待驗收'].includes(task.status)).length;
   $('#dispatchQuoteTotal').textContent =
     money(tasks.reduce((sum, task) => sum + task.totalQuote, 0));
-  const activeTasks = tasks.filter(task => !isCompletedDispatchHistory(task.status));
+  const activeTasks = tasks.filter(task => !isCompletedDispatchHistory(task));
   $('#dispatchTaskList').innerHTML = activeTasks.length
     ? activeTasks.map(dispatchTaskCard).join('')
     : '<div class="empty">目前沒有進行中的派工任務；已完工工單可在下方回查。</div>';
@@ -54,7 +59,7 @@ function renderAdminDispatchHistory() {
   const table = $('#adminDispatchHistoryTable');
   if (!table) return;
   const rows = (state.dispatchData?.tasks || [])
-    .filter(task => isCompletedDispatchHistory(task.status))
+    .filter(task => isCompletedDispatchHistory(task))
     .sort((a, b) => String(b.scheduledDate).localeCompare(String(a.scheduledDate)));
   const shown = rows.slice(0, state.adminHistoryLimit);
   table.innerHTML = shown.length
@@ -66,6 +71,7 @@ function renderAdminDispatchHistory() {
   updateHistoryLoadMore('admin', shown.length, rows.length);
 }
 function dispatchTaskCard(task) {
+  const taskReviews = (state.dispatchData?.reviews || []).filter(item => item.taskId === task.id);
   const items = task.workItems.map(item =>
     '<li>' + escapeHtml(item.content) + '</li>').join('');
   const employees = task.assignees.map(employee =>
@@ -85,12 +91,92 @@ function dispatchTaskCard(task) {
     '<ol class="dispatch-items">' + items + '</ol>' +
     '<div class="assignee-row">' + employees + '</div>' +
     (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
-    (isDispatchLockedStatusClient(task.status)
-      ? '<div class="dispatch-card-actions"><span class="locked-hint">已結案，停止修改</span></div>'
-      : '<div class="dispatch-card-actions"><button type="button" class="btn outlined small edit-dispatch-task" data-task-id="' + escapeHtml(task.id) + '"><span class="material-symbols-rounded">edit</span>修改派工</button></div>') +
-    '</article>';
+    '<div class="dispatch-card-actions">' +
+      (taskReviews.length ? '<button type="button" class="btn primary small review-dispatch-task" data-task-id="' + escapeHtml(task.id) + '"><span class="material-symbols-rounded">fact_check</span>審核回報 ' + taskReviews.length + '</button>' : '') +
+      (isDispatchLockedStatusClient(task.status)
+        ? '<span class="locked-hint">已付款結案</span>'
+        : '<button type="button" class="btn outlined small edit-dispatch-task" data-task-id="' + escapeHtml(task.id) + '"><span class="material-symbols-rounded">edit</span>修改派工</button>') +
+    '</div></article>';
 }
 
+async function openDispatchReviewDialog(taskId) {
+  $('#dispatchReviewTaskCode').textContent = taskId;
+  $('#dispatchReviewTitle').textContent = '完工回報審核';
+  $('#dispatchReviewContent').innerHTML = '<div class="empty">正在載入回報內容…</div>';
+  $('#dispatchReviewDialog').showModal();
+  try {
+    state.dispatchReviewDetail = await gas('getDispatchReviewDetail', taskId, state.token);
+    $('#dispatchReviewTitle').textContent = state.dispatchReviewDetail.task.name + '｜完工回報審核';
+    renderDispatchReviewDetail();
+  } catch (error) {
+    $('#dispatchReviewContent').innerHTML = '<div class="empty error-empty">' + escapeHtml(errorText(error)) + '</div>';
+  }
+}
+
+function renderDispatchReviewDetail() {
+  const detail = state.dispatchReviewDetail;
+  if (!detail?.employees?.length) {
+    $('#dispatchReviewContent').innerHTML = '<div class="empty">尚無員工完工回報。</div>';
+    return;
+  }
+  $('#dispatchReviewContent').innerHTML = detail.employees.map(group => {
+    const workflow = group.workflow || { status: '待審核', amount: group.totalAmount };
+    const reports = group.reports.map(report => {
+      const expenses = report.expenses.length
+        ? report.expenses.map(item => '<li><span>' + escapeHtml(item.category || '費用') + '</span><strong>' + money(item.amount) + '</strong></li>').join('')
+        : '<li><span>本次無報帳費用</span><strong>NT$ 0</strong></li>';
+      const attachments = report.attachments.length
+        ? report.attachments.map(file => file.type === '完工照片'
+          ? '<a class="review-photo" href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=' + encodeURIComponent(file.fileId) + '&sz=w400" alt="' + escapeHtml(file.name) + '"><small>' + escapeHtml(file.name) + '</small></a>'
+          : '<a class="review-receipt" href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener"><span class="material-symbols-rounded">receipt_long</span>' + escapeHtml(file.name) + '</a>').join('')
+        : '<div class="empty compact">沒有附件</div>';
+      return '<section class="review-report"><div class="review-report-head"><strong>' + escapeHtml(report.createdAt) + '</strong><span>' + money(report.amount) + '</span></div>' +
+        '<p><b>完成工作：</b>' + escapeHtml(report.completedItems) + '</p>' +
+        (report.note ? '<p><b>員工回報備註：</b>' + escapeHtml(report.note) + '</p>' : '') +
+        '<ul class="review-expenses">' + expenses + '</ul><div class="review-attachments">' + attachments + '</div></section>';
+    }).join('');
+    const paid = workflow.status === '已付款';
+    return '<article class="review-employee" data-review-email="' + escapeHtml(group.employeeEmail) + '">' +
+      '<div class="review-employee-head"><div><h4>' + escapeHtml(group.employeeName) + '</h4><small>' + escapeHtml(group.employeeEmail) + '</small></div><span class="chip">' + escapeHtml(workflow.status) + '</span></div>' +
+      reports +
+      '<div class="review-settlement"><label>待付款金額<input class="review-amount" type="number" min="0" max="100000000" value="' + Number(workflow.amount ?? group.totalAmount) + '" ' + (paid ? 'readonly' : '') + '></label>' +
+      '<label>老闆審核備註<textarea class="review-admin-note" rows="4" maxlength="1000" ' + (paid ? 'readonly' : '') + '>' + escapeHtml(workflow.adminNote || '') + '</textarea></label>' +
+      (workflow.employeeNote ? '<p class="review-party-note"><b>員工請款備註：</b>' + escapeHtml(workflow.employeeNote) + '</p>' : '') +
+      '<label>老闆付款備註<textarea class="review-payment-note" rows="3" maxlength="1000" ' + (paid ? 'readonly' : '') + '>' + escapeHtml(workflow.paymentNote || '') + '</textarea></label>' +
+      '<div class="review-actions">' +
+        (!paid ? '<button type="button" class="btn outlined small save-review-note">儲存審核備註</button>' : '') +
+        (workflow.status === '待審核' ? '<button type="button" class="btn primary small approve-review">審核通過</button>' : '') +
+        (workflow.status === '待付款' ? '<button type="button" class="btn primary small confirm-payment">確認已付款</button>' : '') +
+      '</div></div></article>';
+  }).join('');
+}
+
+async function handleDispatchReviewAction(event) {
+  const button = event.target.closest('.save-review-note,.approve-review,.confirm-payment');
+  if (!button) return;
+  const card = button.closest('[data-review-email]');
+  const payload = {
+    taskId: state.dispatchReviewDetail.task.id,
+    employeeEmail: card.dataset.reviewEmail,
+    amount: $('.review-amount', card).value,
+    note: button.classList.contains('confirm-payment')
+      ? $('.review-payment-note', card).value
+      : $('.review-admin-note', card).value
+  };
+  button.disabled = true;
+  try {
+    const method = button.classList.contains('approve-review')
+      ? 'reviewDispatchEmployeeReport'
+      : button.classList.contains('confirm-payment')
+        ? 'confirmDispatchPayment' : 'saveAdminReviewNote';
+    const result = await gas(method, payload, state.token);
+    toast(result.message);
+    state.dispatchReviewDetail = await gas('getDispatchReviewDetail', payload.taskId, state.token);
+    renderDispatchReviewDetail();
+    await loadDispatch();
+  } catch (error) { toast(errorText(error), true); }
+  finally { button.disabled = false; }
+}
 async function openDispatchDialog() {
   if (!state.dispatchData) await loadDispatch();
   state.editingDispatchTaskId = '';
