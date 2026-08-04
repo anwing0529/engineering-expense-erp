@@ -26,16 +26,16 @@ $('#refreshDispatchBtn').addEventListener('click', () => {
   $('#dispatchReviewContent').addEventListener('click', handleDispatchReviewAction);
 }
 
-async function loadDispatch() {
+async function loadDispatch(silent = false) {
   if (state.user.role !== 'ADMIN') return;
-  setLoading(true);
+  if (!silent) setLoading(true);
   try {
     state.dispatchData = await gas('getDispatchBootstrap', state.token);
     renderDispatch();
   } catch (e) {
     toast(errorText(e), true);
   } finally {
-    setLoading(false);
+    if (!silent) setLoading(false);
   }
 }
 
@@ -87,7 +87,7 @@ function dispatchTaskCard(task) {
     escapeHtml(task.address) + '</a>' +
     '<div class="dispatch-meta"><span>預定 ' + escapeHtml(task.scheduledDate) +
     '</span><span>工程報價 ' + money(task.totalQuote) + '</span></div>' +
-    workflowProgressHtml(task.status) +
+    workflowProgressHtml(dispatchReviewProgressStatus(task.status, taskReviews)) +
     '<ol class="dispatch-items">' + items + '</ol>' +
     '<div class="assignee-row">' + employees + '</div>' +
     (task.note ? '<p class="dispatch-note">' + escapeHtml(task.note) + '</p>' : '') +
@@ -379,6 +379,15 @@ async function submitDispatch(e) {
     button.disabled = false;
     button.textContent = state.editingDispatchTaskId ? '儲存修改' : '建立派工';
   }
+}
+
+function dispatchReviewProgressStatus(taskStatus, reviews) {
+  if (!reviews || !reviews.length) return taskStatus;
+  const statuses = reviews.map(item => item.status);
+  if (statuses.every(status => status === '已付款')) return '付款';
+  if (statuses.some(status => status === '待審核')) return '驗收';
+  if (statuses.some(status => status === '可請款' || status === '待付款')) return '請款';
+  return taskStatus;
 }
 
 function normalizeDispatchStage(status) {

@@ -1,5 +1,5 @@
 <script>
-const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], workOrders: [], workReportPhotos: [], workReportReceipts: [], employeeHistoryLimit: 10, adminHistoryLimit: 10, adminData: null, dispatchData: null };
+const state = { token: localStorage.getItem('expense_session') || '', user: null, bootstrap: null, myRows: [], workOrders: [], workReportPhotos: [], workReportReceipts: [], employeeHistoryLimit: 10, adminHistoryLimit: 10, adminData: null, dispatchData: null, currentView: '', workflowRefreshTimer: null, workflowRefreshBusy: false };
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const money = value => 'NT$ ' + Number(value || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
@@ -100,12 +100,20 @@ $('#userName').textContent = state.user.name;
   fillSelect($('#expenseCategory'), state.bootstrap.categories, '請選擇類別');
   if (isAdmin) switchView('dispatch');
   else switchView('employee');
+  startWorkflowAutoRefresh();
 }
 
 function showLogin() { $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); }
-function clearSession() { state.token = ''; localStorage.removeItem('expense_session'); localStorage.removeItem('expense_user'); }
+function clearSession() {
+  state.token = '';
+  if (state.workflowRefreshTimer) clearInterval(state.workflowRefreshTimer);
+  state.workflowRefreshTimer = null;
+  localStorage.removeItem('expense_session');
+  localStorage.removeItem('expense_user');
+}
 function switchView(view) {
   if (['admin', 'dispatch'].includes(view) && state.user.role !== 'ADMIN') return;
+  state.currentView = view;
   $$('.view').forEach(x => x.classList.add('hidden'));
   $('#' + view + 'View').classList.remove('hidden');
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === view));
@@ -157,7 +165,7 @@ function renderWorkOrders() {
       return '<button type="button" class="employee-work-order-card" data-task-id="' + escapeHtml(task.id) + '">' +
         '<div class="work-order-card-head"><div><small>' + escapeHtml(task.id) + '</small><h4>' + escapeHtml(task.name) + '</h4></div><span class="chip">' + escapeHtml(workflow?.status || task.status) + '</span></div>' +
         '<p class="work-order-address"><span class="material-symbols-rounded">location_on</span>' + escapeHtml(task.address) + '</p>' +
-        workflowProgressHtml(workflow?.status === '已付款' ? '付款' : task.status) +
+        workflowProgressHtml(dispatchProgressStatus(task.status, workflow)) +
         '<div class="work-order-progress"><div><span style="width:' + (total ? done / total * 100 : 0) + '%"></span></div><small>' + done + ' / ' + total + ' 項完成</small></div>' +
         workflowInfo +
         '<div class="work-order-card-foot"><span>預定 ' + escapeHtml(task.scheduledDate) + '</span><strong>' + actionText + ' <span class="material-symbols-rounded">arrow_forward</span></strong></div></button>';
@@ -216,6 +224,27 @@ async function requestEmployeePayment(event) {
     await loadWorkOrders();
   } catch (error) { toast(errorText(error), true); }
   finally { button.disabled = false; button.textContent = '送出請款'; }
+}
+function dispatchProgressStatus(taskStatus, workflow) {
+  if (!workflow) return taskStatus;
+  if (workflow.status === '已付款') return '付款';
+  if (workflow.status === '可請款' || workflow.status === '待付款') return '請款';
+  if (workflow.status === '待審核') return '驗收';
+  return taskStatus;
+}
+
+function startWorkflowAutoRefresh() {
+  if (state.workflowRefreshTimer) clearInterval(state.workflowRefreshTimer);
+  state.workflowRefreshTimer = setInterval(async () => {
+    if (!state.user || document.hidden || state.workflowRefreshBusy) return;
+    state.workflowRefreshBusy = true;
+    try {
+      if (state.currentView === 'employee' && state.user.role === 'EMPLOYEE') await loadWorkOrders();
+      if (state.currentView === 'dispatch' && state.user.role === 'ADMIN') await loadDispatch(true);
+    } finally {
+      state.workflowRefreshBusy = false;
+    }
+  }, 20000);
 }
 function isCompletedDispatchHistory(taskOrStatus) {
   if (taskOrStatus && typeof taskOrStatus === 'object') {
